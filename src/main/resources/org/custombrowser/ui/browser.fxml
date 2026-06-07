@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.web.WebView?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx/22.0.1"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="org.custombrowser.ui.BrowserController"
+      prefWidth="1024" prefHeight="720">
+
+    <!-- Toolbar -->
+    <HBox alignment="CENTER_LEFT" spacing="5">
+        <padding>
+            <Insets top="5" bottom="5" left="5" right="5"/>
+        </padding>
+
+        <Button text="◀" onAction="#back">
+            <tooltip><Tooltip text="Back"/></tooltip>
+        </Button>
+        <Button text="▶" onAction="#forward">
+            <tooltip><Tooltip text="Forward"/></tooltip>
+        </Button>
+        <Button text="⟳" onAction="#refreshPage">
+            <tooltip><Tooltip text="Refresh"/></tooltip>
+        </Button>
+
+        <TextField fx:id="textField" promptText="Enter URL or search..."
+                   onAction="#loadPage" HBox.hgrow="ALWAYS"/>
+
+        <Button text="Load" onAction="#loadPage"/>
+        <Button text="+" onAction="#zoomIn">
+            <tooltip><Tooltip text="Zoom In"/></tooltip>
+        </Button>
+        <Button text="−" onAction="#zoomOut">
+            <tooltip><Tooltip text="Zoom Out"/></tooltip>
+        </Button>
+        <Button text="History" onAction="#displayHistory"/>
+        <Button text="Run JS" onAction="#executeJs">
+            <tooltip><Tooltip text="Execute JavaScript"/></tooltip>
+        </Button>
+    </HBox>
+
+    <!-- WebView fills remaining space -->
+    <WebView fx:id="webView" VBox.vgrow="ALWAYS"/>
+
+</VBox>
