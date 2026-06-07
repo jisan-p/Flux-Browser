@@ -30,9 +30,13 @@ public class BrowserController implements Initializable {
         engine = webView.getEngine();
         history = engine.getHistory();
 
+        // Keep the address bar in sync with the current page URL
+        engine.locationProperty().addListener((obs, oldUrl, newUrl) -> {
+            textField.setText(newUrl);
+        });
+
         // Load a default homepage
         engine.load("https://www.google.com");
-        textField.setText("https://www.google.com");
     }
 
     // ---- Navigation ----
