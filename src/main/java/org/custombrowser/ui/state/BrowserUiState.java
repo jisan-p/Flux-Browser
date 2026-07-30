@@ -1,5 +1,9 @@
 package org.custombrowser.ui.state;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.custombrowser.ui.model.SpeedDialEntry;
 
 import javafx.beans.property.BooleanProperty;
@@ -12,7 +16,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 /**
- * Shared, in-memory Phase 1 UI preferences.
+ * Shared, in-memory browser UI preferences.
  *
  * <p>PostgreSQL persistence is introduced in Phase 3. Until then these values
  * intentionally reset when Flux restarts.</p>
@@ -78,6 +82,86 @@ public final class BrowserUiState {
 
     public ObservableList<SpeedDialEntry> speedDials() {
         return speedDials;
+    }
+
+    public void applyPersistedState(
+            Map<String, String> settings,
+            List<SpeedDialEntry> persistedSpeedDials) {
+        accent.set(enumValue(
+                Accent.class,
+                settings.get("accent"),
+                Accent.RED));
+        wallpaper.set(enumValue(
+                Wallpaper.class,
+                settings.get("wallpaper"),
+                Wallpaper.GRID));
+        sidebarVisible.set(booleanValue(
+                settings.get("sidebar_visible"),
+                true));
+        panelDocked.set(booleanValue(
+                settings.get("panel_docked"),
+                true));
+        reducedMotion.set(booleanValue(
+                settings.get("reduced_motion"),
+                false));
+        uiScale.set(doubleValue(
+                settings.get("ui_scale"),
+                13.0,
+                11.0,
+                16.0));
+        if (persistedSpeedDials != null && !persistedSpeedDials.isEmpty()) {
+            speedDials.setAll(persistedSpeedDials);
+        }
+    }
+
+    public Map<String, String> toSettingsMap() {
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put("accent", accent.get().name());
+        values.put("wallpaper", wallpaper.get().name());
+        values.put("sidebar_visible", Boolean.toString(sidebarVisible.get()));
+        values.put("panel_docked", Boolean.toString(panelDocked.get()));
+        values.put("reduced_motion", Boolean.toString(reducedMotion.get()));
+        values.put("ui_scale", Double.toString(uiScale.get()));
+        return Map.copyOf(values);
+    }
+
+    private static <T extends Enum<T>> T enumValue(
+            Class<T> type,
+            String rawValue,
+            T fallback) {
+        if (rawValue == null) {
+            return fallback;
+        }
+        try {
+            return Enum.valueOf(type, rawValue);
+        } catch (IllegalArgumentException ignored) {
+            return fallback;
+        }
+    }
+
+    private static boolean booleanValue(String value, boolean fallback) {
+        if ("true".equalsIgnoreCase(value)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(value)) {
+            return false;
+        }
+        return fallback;
+    }
+
+    private static double doubleValue(
+            String value,
+            double fallback,
+            double minimum,
+            double maximum) {
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            return Math.max(minimum, Math.min(maximum, Double.parseDouble(value)));
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
     }
 
     public enum Accent {

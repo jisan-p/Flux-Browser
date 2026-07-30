@@ -62,7 +62,8 @@ class BrowserUiSmokeTest {
     @Test
     @Order(1)
     void browserFxmlLoadsWithCompositionRoot() throws Exception {
-        try (ApplicationContext context = ApplicationContext.createDefault()) {
+        ApplicationContext context = ApplicationContext.createForTests();
+        try {
             LoadedFxml loaded = callOnJavaFxThread(() -> {
                 FXMLLoader loader = new FXMLLoader(
                         BrowserWindow.class.getResource("browser.fxml"));
@@ -78,11 +79,70 @@ class BrowserUiSmokeTest {
             assertNotNull(loaded.root().lookup(".sidebar"));
             assertNotNull(loaded.root().lookup(".start-page"));
             assertNotNull(loaded.root().lookup(".easy-setup-panel"));
+            assertNotNull(loaded.root().lookup(".browser-tab"));
+            assertNotNull(loaded.root().lookup(".find-bar"));
+            assertNotNull(loaded.root().lookup(".error-page"));
+        } finally {
+            callOnJavaFxThread(() -> {
+                context.close();
+                return null;
+            });
         }
     }
 
     @Test
     @Order(2)
+    void tabLifecycleAlwaysKeepsAnActiveTab() throws Exception {
+        ApplicationContext context = ApplicationContext.createForTests();
+        try {
+            LoadedFxml loaded = callOnJavaFxThread(() -> {
+                FXMLLoader loader = new FXMLLoader(
+                        BrowserWindow.class.getResource("browser.fxml"));
+                loader.setControllerFactory(context::createController);
+                Parent root = loader.load();
+                return new LoadedFxml(root, loader.getController());
+            });
+
+            BrowserController controller =
+                    assertInstanceOf(BrowserController.class, loaded.controller());
+            assertEquals(1, loaded.root().lookupAll(".browser-tab").size());
+
+            callOnJavaFxThread(() -> {
+                controller.newTab();
+                return null;
+            });
+            assertEquals(2, loaded.root().lookupAll(".browser-tab").size());
+
+            callOnJavaFxThread(() -> {
+                controller.closeActiveTab();
+                return null;
+            });
+            assertEquals(1, loaded.root().lookupAll(".browser-tab").size());
+
+            callOnJavaFxThread(() -> {
+                controller.closeActiveTab();
+                return null;
+            });
+            assertEquals(
+                    1,
+                    loaded.root().lookupAll(".browser-tab").size(),
+                    "Closing the final tab must create a replacement start tab");
+
+            callOnJavaFxThread(() -> {
+                controller.reopenClosedTab();
+                return null;
+            });
+            assertEquals(2, loaded.root().lookupAll(".browser-tab").size());
+        } finally {
+            callOnJavaFxThread(() -> {
+                context.close();
+                return null;
+            });
+        }
+    }
+
+    @Test
+    @Order(3)
     void webViewLoadsPageFromLocalHttpServer() throws Exception {
         HttpServer server = createLocalServer();
         server.start();

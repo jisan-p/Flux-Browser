@@ -14,10 +14,15 @@ import java.util.regex.Pattern;
 public final class NavigationResolver {
 
     private static final Set<String> SUPPORTED_SCHEMES = Set.of("http", "https", "file");
+    private static final Set<String> EXTERNAL_SCHEMES =
+            Set.of("mailto", "tel", "magnet");
     private static final Pattern IPV4_WITH_OPTIONAL_PORT = Pattern.compile(
             "^(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d{1,5})?(?:/.*)?$");
     private static final Pattern LOCALHOST_WITH_OPTIONAL_PORT = Pattern.compile(
             "^localhost(?::\\d{1,5})?(?:/.*)?$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern IPV6_WITH_OPTIONAL_PORT = Pattern.compile(
+            "^\\[[0-9a-f:]+](?::\\d{1,5})?(?:/.*)?$",
+            Pattern.CASE_INSENSITIVE);
 
     private final String searchUrlPrefix;
 
@@ -42,10 +47,13 @@ public final class NavigationResolver {
         URI explicitUri = parseUri(input);
         if (explicitUri != null && explicitUri.getScheme() != null) {
             String scheme = explicitUri.getScheme().toLowerCase(Locale.ROOT);
-            if (!SUPPORTED_SCHEMES.contains(scheme)) {
-                throw new IllegalArgumentException("Unsupported URL scheme: " + scheme);
+            if (SUPPORTED_SCHEMES.contains(scheme)) {
+                return new NavigationTarget(explicitUri, NavigationType.DIRECT);
             }
-            return new NavigationTarget(explicitUri, NavigationType.DIRECT);
+            if (EXTERNAL_SCHEMES.contains(scheme)) {
+                return new NavigationTarget(explicitUri, NavigationType.EXTERNAL);
+            }
+            throw new IllegalArgumentException("Unsupported URL scheme: " + scheme);
         }
 
         if (looksLikeHost(input)) {
@@ -67,7 +75,8 @@ public final class NavigationResolver {
 
     private static boolean isLocalAddress(String input) {
         return LOCALHOST_WITH_OPTIONAL_PORT.matcher(input).matches()
-                || IPV4_WITH_OPTIONAL_PORT.matcher(input).matches();
+                || IPV4_WITH_OPTIONAL_PORT.matcher(input).matches()
+                || IPV6_WITH_OPTIONAL_PORT.matcher(input).matches();
     }
 
     private static NavigationTarget directTargetWithDefaultScheme(String input) {
@@ -99,7 +108,8 @@ public final class NavigationResolver {
 
     public enum NavigationType {
         DIRECT,
-        SEARCH
+        SEARCH,
+        EXTERNAL
     }
 
     public record NavigationTarget(URI uri, NavigationType type) {

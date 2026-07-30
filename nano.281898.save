@@ -1,5 +1,3 @@
-upon running mvn javafx:run the following error was found
-
 00:16:46.898 ERROR [JavaFX Application Thread] org.custombrowser.ui.BrowserWindow - Unable to start Flux Browser
 java.lang.IllegalAccessError: class org.controlsfx.control.textfield.AutoCompletionBinding (in unnamed module @0x5267307d) cannot access class com.sun.javafx.event.EventHandlerManager (in module javafx.base) because module javafx.base does not export com.sun.javafx.event to unnamed module @0x5267307d
 	at org.controlsfx.control.textfield.AutoCompletionBinding.<init>(AutoCompletionBinding.java:538)
@@ -31,3 +29,28 @@ java.lang.IllegalAccessError: class org.controlsfx.control.textfield.AutoComplet
 	at javafx.graphics@21.0.7/com.sun.glass.ui.gtk.GtkApplication._runLoop(Native Method)
 	at javafx.graphics@21.0.7/com.sun.glass.ui.gtk.GtkApplication.lambda$runLoop$10(GtkApplication.java:263)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+
+rdfvgegveeeeg
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+nanoiosurhrohwrefgoi

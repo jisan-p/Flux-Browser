@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Pane?>
 
@@ -13,33 +14,31 @@
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="org.custombrowser.ui.component.TabStripController">
     <children>
-        <HBox alignment="CENTER_LEFT"
-              minWidth="210.0"
-              prefWidth="240.0"
-              maxWidth="280.0"
-              spacing="8.0"
-              styleClass="active-tab">
-            <children>
-                <Button text="◆"
-                        focusTraversable="false"
-                        onAction="#showStartPage"
-                        styleClass="tab-favicon"/>
-                <Label fx:id="tabTitle"
-                       text="Start Page"
-                       maxWidth="190.0"
-                       styleClass="tab-title"
-                       HBox.hgrow="ALWAYS"/>
-                <Button text="×"
-                        focusTraversable="false"
-                        onAction="#showStartPage"
-                        styleClass="tab-close"/>
-            </children>
-        </HBox>
+        <ScrollPane fx:id="tabScroller"
+                    fitToHeight="true"
+                    hbarPolicy="AS_NEEDED"
+                    vbarPolicy="NEVER"
+                    pannable="true"
+                    styleClass="tab-scroller"
+                    HBox.hgrow="ALWAYS">
+            <content>
+                <HBox fx:id="tabHeaders"
+                      alignment="CENTER_LEFT"
+                      spacing="5.0"/>
+            </content>
+        </ScrollPane>
         <Button text="+"
                 focusTraversable="false"
-                onAction="#showStartPage"
-                styleClass="new-tab-button"/>
-        <Pane HBox.hgrow="ALWAYS"/>
-        <Label text="WORKSPACE 1" styleClass="workspace-label"/>
+                onAction="#newTab"
+                styleClass="new-tab-button">
+            <tooltip><Tooltip text="New tab (Ctrl/Command+T)"/></tooltip>
+        </Button>
+        <Button text="↶"
+                focusTraversable="false"
+                onAction="#reopenClosedTab"
+                styleClass="new-tab-button">
+            <tooltip><Tooltip text="Reopen closed tab"/></tooltip>
+        </Button>
+        <Pane minWidth="8.0"/>
     </children>
 </HBox>

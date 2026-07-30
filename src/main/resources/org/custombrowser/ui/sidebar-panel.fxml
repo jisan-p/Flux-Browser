@@ -3,8 +3,10 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Pane?>
@@ -21,9 +23,7 @@
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="org.custombrowser.ui.component.SidebarPanelController">
     <children>
-        <HBox alignment="CENTER_LEFT"
-              spacing="8.0"
-              styleClass="panel-header">
+        <HBox alignment="CENTER_LEFT" spacing="8.0" styleClass="panel-header">
             <children>
                 <Label fx:id="panelTitle"
                        text="GX CONTROL"
@@ -55,7 +55,8 @@
                                        styleClass="metric-value"/>
                             </children>
                         </HBox>
-                        <ProgressBar progress="0.18" maxWidth="1.7976931348623157E308"/>
+                        <ProgressBar progress="0.18"
+                                     maxWidth="1.7976931348623157E308"/>
                     </children>
                 </VBox>
                 <VBox spacing="6.0" styleClass="metric-card">
@@ -67,11 +68,12 @@
                                 <Label text="Standby" styleClass="metric-value"/>
                             </children>
                         </HBox>
-                        <ProgressBar progress="0.32" maxWidth="1.7976931348623157E308"/>
+                        <ProgressBar progress="0.32"
+                                     maxWidth="1.7976931348623157E308"/>
                     </children>
                 </VBox>
                 <Separator/>
-                <Label text="GX Control is visually staged in Phase 1. Live process metrics and tab suspension are implemented in Phase 5."
+                <Label text="Live process metrics and tab suspension arrive in Phase 5."
                        wrapText="true"
                        styleClass="muted-copy"/>
             </children>
@@ -81,73 +83,159 @@
         </VBox>
 
         <VBox fx:id="bookmarksContent"
-              alignment="CENTER"
-              spacing="12.0"
+              spacing="9.0"
               visible="false"
               managed="false"
-              styleClass="empty-panel"
+              styleClass="data-panel"
               VBox.vgrow="ALWAYS">
             <children>
-                <Label text="★" styleClass="empty-icon"/>
-                <Label text="NO BOOKMARKS YET" styleClass="empty-title"/>
-                <Label text="Bookmark storage arrives with PostgreSQL persistence in Phase 3."
-                       wrapText="true"
-                       textAlignment="CENTER"
-                       styleClass="muted-copy"/>
+                <TextField fx:id="bookmarkSearch"
+                           promptText="Search bookmarks"
+                           styleClass="panel-search"/>
+                <HBox spacing="6.0">
+                    <children>
+                        <Button text="ADD CURRENT"
+                                onAction="#bookmarkCurrentPage"
+                                styleClass="compact-action"
+                                HBox.hgrow="ALWAYS"/>
+                        <Button text="OPEN"
+                                onAction="#openSelectedBookmark"
+                                styleClass="compact-action"/>
+                    </children>
+                </HBox>
+                <ListView fx:id="bookmarkList"
+                          styleClass="data-list"
+                          VBox.vgrow="ALWAYS"/>
+                <Label fx:id="bookmarkStatus"
+                       text="0 BOOKMARKS"
+                       styleClass="data-status"/>
+                <HBox spacing="6.0">
+                    <children>
+                        <Button text="DELETE SELECTED"
+                                onAction="#deleteSelectedBookmark"
+                                styleClass="compact-action"/>
+                        <Button text="CLEAR ALL"
+                                onAction="#clearBookmarks"
+                                styleClass="danger-action"/>
+                    </children>
+                </HBox>
             </children>
+            <padding>
+                <Insets top="12.0" right="12.0" bottom="12.0" left="12.0"/>
+            </padding>
         </VBox>
 
         <VBox fx:id="historyContent"
-              alignment="CENTER"
-              spacing="12.0"
+              spacing="9.0"
               visible="false"
               managed="false"
-              styleClass="empty-panel"
+              styleClass="data-panel"
               VBox.vgrow="ALWAYS">
             <children>
-                <Label text="◷" styleClass="empty-icon"/>
-                <Label text="HISTORY" styleClass="empty-title"/>
-                <Label text="Persistent browsing history arrives in Phase 3."
-                       wrapText="true"
-                       textAlignment="CENTER"
+                <TextField fx:id="historySearch"
+                           promptText="Search browsing history"
+                           styleClass="panel-search"/>
+                <Label text="Double-click a visit to open it."
                        styleClass="muted-copy"/>
+                <ListView fx:id="historyList"
+                          styleClass="data-list"
+                          VBox.vgrow="ALWAYS"/>
+                <Label fx:id="historyStatus"
+                       text="0 VISITS"
+                       styleClass="data-status"/>
+                <HBox spacing="6.0">
+                    <children>
+                        <Button text="DELETE SELECTED"
+                                onAction="#deleteSelectedVisit"
+                                styleClass="compact-action"/>
+                        <Button text="CLEAR ALL"
+                                onAction="#clearHistory"
+                                styleClass="danger-action"/>
+                    </children>
+                </HBox>
             </children>
+            <padding>
+                <Insets top="12.0" right="12.0" bottom="12.0" left="12.0"/>
+            </padding>
         </VBox>
 
         <VBox fx:id="downloadsContent"
-              alignment="CENTER"
-              spacing="12.0"
+              spacing="9.0"
               visible="false"
               managed="false"
-              styleClass="empty-panel"
+              styleClass="data-panel"
               VBox.vgrow="ALWAYS">
             <children>
-                <Label text="⇩" styleClass="empty-icon"/>
-                <Label text="DOWNLOADS" styleClass="empty-title"/>
-                <Label text="The download manager is scheduled for Phase 4."
+                <TextField fx:id="downloadSearch"
+                           promptText="Search download metadata"
+                           styleClass="panel-search"/>
+                <Label text="Download transfers arrive in Phase 4. Metadata created then will appear here."
                        wrapText="true"
-                       textAlignment="CENTER"
                        styleClass="muted-copy"/>
+                <ListView fx:id="downloadList"
+                          styleClass="data-list"
+                          VBox.vgrow="ALWAYS"/>
+                <Label fx:id="downloadStatus"
+                       text="0 DOWNLOADS"
+                       styleClass="data-status"/>
+                <HBox spacing="6.0">
+                    <children>
+                        <Button text="DELETE SELECTED"
+                                onAction="#deleteSelectedDownload"
+                                styleClass="compact-action"/>
+                        <Button text="CLEAR ALL"
+                                onAction="#clearDownloads"
+                                styleClass="danger-action"/>
+                    </children>
+                </HBox>
             </children>
+            <padding>
+                <Insets top="12.0" right="12.0" bottom="12.0" left="12.0"/>
+            </padding>
         </VBox>
 
         <VBox fx:id="settingsContent"
-              spacing="14.0"
+              spacing="12.0"
               visible="false"
               managed="false"
               styleClass="panel-content"
               VBox.vgrow="ALWAYS">
             <children>
-                <Label text="QUICK SETTINGS" styleClass="section-label"/>
-                <Label text="Use Easy Setup in the top-right toolbar to change accent, wallpaper, interface scale, sidebar visibility, dock mode, and reduced motion."
-                       wrapText="true"
-                       styleClass="muted-copy"/>
-                <Label text="Settings are in-memory until Phase 3."
-                       wrapText="true"
-                       styleClass="warning-copy"/>
+                <TextField fx:id="settingsSearch"
+                           promptText="Search settings"
+                           styleClass="panel-search"/>
+                <VBox fx:id="appearanceSettings"
+                      spacing="7.0"
+                      styleClass="settings-card">
+                    <children>
+                        <Label text="APPEARANCE" styleClass="section-label"/>
+                        <Label text="Accent, wallpaper, interface scale, sidebar, dock mode, and reduced motion are persisted automatically. Change them from Easy Setup."
+                               wrapText="true"
+                               styleClass="muted-copy"/>
+                    </children>
+                </VBox>
+                <VBox fx:id="privacySettings"
+                      spacing="7.0"
+                      styleClass="settings-card">
+                    <children>
+                        <Label text="BROWSING DATA" styleClass="section-label"/>
+                        <Label text="History and download metadata can be searched and removed from their sidebar pages."
+                               wrapText="true"
+                               styleClass="muted-copy"/>
+                        <Button text="CLEAR HISTORY"
+                                onAction="#clearHistory"
+                                styleClass="danger-action"/>
+                        <Button text="CLEAR DOWNLOAD METADATA"
+                                onAction="#clearDownloads"
+                                styleClass="danger-action"/>
+                    </children>
+                </VBox>
+                <Label fx:id="databaseStatus"
+                       text="CONNECTED · POSTGRESQL"
+                       styleClass="database-status"/>
             </children>
             <padding>
-                <Insets top="18.0" right="16.0" bottom="18.0" left="16.0"/>
+                <Insets top="12.0" right="12.0" bottom="12.0" left="12.0"/>
             </padding>
         </VBox>
     </children>

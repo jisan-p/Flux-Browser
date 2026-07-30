@@ -2,7 +2,7 @@
 
 Flux Browser is a lightweight desktop browser built with Java 21, JavaFX, FXML, and CSS. The project is being developed phase-by-phase toward an Opera GX-inspired interface while retaining JavaFX `WebView` as its browser engine.
 
-## Implemented through Phase 1
+## Implemented through Phase 3
 
 - Standard Maven project targeting Java 21.
 - JavaFX controls, FXML, and WebView integration.
@@ -15,6 +15,18 @@ Flux Browser is a lightweight desktop browser built with Java 21, JavaFX, FXML, 
 - GX-inspired tab strip, navigation bar, vertical sidebar, overlay/docked panels, and start page.
 - Editable and reorderable in-memory Speed Dial.
 - Easy Setup controls for accent, wallpaper, UI scale, sidebar visibility, panel docking, and reduced motion.
+- Independent `WebView`, history, load state, title, favicon, zoom, and failure state for every tab.
+- New, close, reopen, duplicate, pin, reorder, close-others, close-right, middle-click close, and popup-created tabs.
+- Find in page, copy address, open externally, print, bounded zoom, and per-page retry UI.
+- Asynchronous favicon discovery/loading with timeouts, caching, size limits, and fallback behavior.
+- Omnibox autocomplete from Speed Dial and in-memory tab history.
+- Confirmed routing for `mailto:`, `tel:`, and `magnet:` links; unsupported schemes are blocked.
+- Mandatory PostgreSQL startup validation through HikariCP and JDBC.
+- Standalone SQL initialization scripts for settings, bookmark folders/bookmarks, visits, downloads metadata, Speed Dial, sessions/tabs, recently closed tabs, and window state.
+- Persistent appearance settings, Speed Dial ordering, browsing history, bookmarks, tab/session state, closed tabs, zoom, pin state, and window geometry.
+- Lazy session restoration: only the selected restored tab loads at startup.
+- Searchable bookmarks, history, downloads metadata, and settings sidebar pages with selected-item deletion and confirmed clear-data actions.
+- Actionable startup dialog when PostgreSQL is unavailable or the Phase 3 schema has not been initialized.
 
 ## Prerequisites
 
@@ -26,12 +38,28 @@ For normal desktop development:
 
 The JavaFX application runs on the host so native desktop windows work consistently across Windows, Linux, and macOS. Docker supplies PostgreSQL and an optional reproducible headless Maven build.
 
+## First Phase 3 database initialization
+
+PostgreSQL initialization scripts only execute when the data volume is empty. If the existing development volume was created during Phase 0, recreate it once so the Phase 3 scripts run:
+
+```bash
+docker compose down -v
+docker compose up -d postgres
+docker compose ps
+```
+
+`docker compose down -v` permanently deletes the local Flux development database. Do not run it when the volume contains data you need.
+
+Expected PostgreSQL state: the service is `healthy`, database `flux_browser` contains schema version `3`, and six default Speed Dial entries exist.
+
 ## Build and run
 
 ```bash
 mvn clean verify
 mvn javafx:run
 ```
+
+PostgreSQL must be healthy before `mvn javafx:run`. Flux intentionally shows a startup error instead of using an in-memory or embedded database fallback.
 
 On a Linux machine without `DISPLAY` or `WAYLAND_DISPLAY`, the JavaFX UI smoke tests are skipped. Run the same `mvn clean verify` command from a graphical session to execute them.
 
@@ -77,7 +105,7 @@ The PostgreSQL service is started automatically and must become healthy before t
 
 ## Configuration contract
 
-Persistence code introduced in a later phase will read these environment variables:
+Persistence reads these environment variables:
 
 ```text
 FLUX_DB_URL=jdbc:postgresql://localhost:5432/flux_browser
@@ -95,10 +123,18 @@ Do not commit production credentials. The fixed password in Compose is for local
 - Reload or stop the current page.
 - Return to the Flux start page.
 - Use `Ctrl`/`Command` + `L` to focus the address bar.
+- Use `Ctrl`/`Command` + `T`, `W`, or `Shift+T` to create, close, or reopen tabs.
+- Use `Ctrl`/`Command` + `Tab` or `Shift+Tab` to cycle tabs.
+- Use `Ctrl`/`Command` + `1` through `9` to select tabs; `9` selects the final tab.
+- Use `Ctrl`/`Command` + `R` to reload or stop and `Alt` + `Left`/`Right` for history.
+- Use `Ctrl`/`Command` + `F` to find in the current page and `P` to print.
 - Use `Ctrl`/`Command` + `+`, `-`, or `0` to control page zoom.
+- Use `Ctrl`/`Command` + `Shift+B`, `H`, `J`, or `,` for bookmarks, history, downloads, or settings panels.
 - Use `F11` to enter or leave full screen.
-- Open GX Control, bookmarks, history, downloads, and settings placeholders from the sidebar.
+- Open GX Control, bookmarks, history, downloads metadata, and settings pages from the sidebar.
 - Add, edit, remove, and reorder Speed Dial entries from the start page.
-- Change Phase 1 appearance settings from Easy Setup.
+- Change persistent appearance settings from Easy Setup.
+- Use the omnibox star to save the current page as a bookmark.
+- Search, open, delete, or clear bookmarks and persistent browsing history from the sidebar.
 
-Phase 1 intentionally presents one visual tab. The multi-WebView tab engine is implemented in Phase 2. Speed Dial and appearance changes remain in memory until PostgreSQL persistence is connected in Phase 3.
+Download transfer handling remains scheduled for Phase 4; Phase 3 supplies and displays its PostgreSQL metadata model. GX Control metrics and tab suspension remain scheduled for Phase 5.

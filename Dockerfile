@@ -6,5 +6,6 @@ COPY pom.xml ./
 RUN mvn --batch-mode dependency:go-offline
 
 COPY src ./src
+COPY docker ./docker
 
 CMD ["mvn", "--batch-mode", "clean", "verify"]

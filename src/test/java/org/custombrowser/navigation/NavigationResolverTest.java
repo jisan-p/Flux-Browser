@@ -49,6 +49,14 @@ class NavigationResolverTest {
     }
 
     @Test
+    void recognizesIpv6AddressWithPort() {
+        var target = resolver.resolve("[::1]:8080/health");
+
+        assertEquals("https://[::1]:8080/health", target.uri().toString());
+        assertEquals(NavigationType.DIRECT, target.type());
+    }
+
+    @Test
     void convertsWordsToEncodedSearch() {
         var target = resolver.resolve("javafx browser");
 
@@ -71,6 +79,14 @@ class NavigationResolverTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> resolver.resolve("javascript:alert('unsafe')"));
+    }
+
+    @Test
+    void routesSupportedExternalScheme() {
+        var target = resolver.resolve("mailto:test@example.com");
+
+        assertEquals("mailto:test@example.com", target.uri().toString());
+        assertEquals(NavigationType.EXTERNAL, target.type());
     }
 
     @Test

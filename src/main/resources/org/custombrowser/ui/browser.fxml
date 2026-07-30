@@ -4,7 +4,6 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.web.WebView?>
 
 <StackPane fx:id="browserRoot"
            prefWidth="1280.0"
@@ -21,6 +20,10 @@
                         <fx:include fx:id="titleBar" source="title-bar.fxml"/>
                         <fx:include fx:id="tabStrip" source="tab-strip.fxml"/>
                         <fx:include fx:id="navigationBar" source="navigation-bar.fxml"/>
+                        <fx:include fx:id="findBar"
+                                    source="find-bar.fxml"
+                                    visible="false"
+                                    managed="false"/>
                     </children>
                 </VBox>
             </top>
@@ -35,11 +38,15 @@
                                 <StackPane fx:id="contentSurface"
                                            styleClass="content-surface">
                                     <children>
-                                        <WebView fx:id="webView"
-                                                 visible="false"
-                                                 managed="false"/>
+                                        <StackPane fx:id="webViewHost"
+                                                   visible="false"
+                                                   managed="false"/>
                                         <fx:include fx:id="startPage"
                                                     source="start-page.fxml"/>
+                                        <fx:include fx:id="errorPage"
+                                                    source="error-page.fxml"
+                                                    visible="false"
+                                                    managed="false"/>
                                     </children>
                                 </StackPane>
                             </center>

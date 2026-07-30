@@ -16,4 +16,24 @@ public interface BrowserActions {
     void reloadOrStop();
 
     void toggleEasySetup();
+
+    void newTab();
+
+    void closeActiveTab();
+
+    void reopenClosedTab();
+
+    void showFindBar();
+
+    void hideFindBar();
+
+    boolean findInPage(String query, boolean backwards, boolean matchCase);
+
+    void copyAddress();
+
+    void openCurrentPageExternally();
+
+    void printCurrentPage();
+
+    void bookmarkCurrentPage();
 }

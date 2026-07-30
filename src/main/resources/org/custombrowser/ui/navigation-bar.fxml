@@ -2,73 +2,100 @@
 
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
 
-<HBox alignment="CENTER_LEFT"
-      prefHeight="52.0"
-      spacing="7.0"
-      styleClass="navigation-bar"
+<VBox styleClass="navigation-bar"
       xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="org.custombrowser.ui.component.NavigationBarController">
     <children>
-        <Button fx:id="backButton"
-                text="‹"
-                disable="true"
-                onAction="#back"
-                styleClass="nav-button">
-            <tooltip><Tooltip text="Back"/></tooltip>
-        </Button>
-        <Button fx:id="forwardButton"
-                text="›"
-                disable="true"
-                onAction="#forward"
-                styleClass="nav-button">
-            <tooltip><Tooltip text="Forward"/></tooltip>
-        </Button>
-        <Button fx:id="reloadButton"
-                text="↻"
-                onAction="#reloadOrStop"
-                styleClass="nav-button">
-            <tooltip><Tooltip text="Reload or stop"/></tooltip>
-        </Button>
-        <Button text="⌂"
-                onAction="#home"
-                styleClass="nav-button">
-            <tooltip><Tooltip text="Start page"/></tooltip>
-        </Button>
-
         <HBox alignment="CENTER_LEFT"
-              spacing="7.0"
-              styleClass="omnibox"
-              HBox.hgrow="ALWAYS">
+              prefHeight="45.0"
+              spacing="7.0">
             <children>
-                <Label text="◇" styleClass="security-indicator"/>
-                <TextField fx:id="addressField"
-                           promptText="Enter a search or web address"
-                           onAction="#submitAddress"
-                           styleClass="address-field"
-                           HBox.hgrow="ALWAYS"/>
-                <Button text="☆"
+                <Button fx:id="backButton"
+                        text="‹"
+                        disable="true"
+                        onAction="#back"
+                        styleClass="nav-button">
+                    <tooltip><Tooltip text="Back"/></tooltip>
+                </Button>
+                <Button fx:id="forwardButton"
+                        text="›"
+                        disable="true"
+                        onAction="#forward"
+                        styleClass="nav-button">
+                    <tooltip><Tooltip text="Forward"/></tooltip>
+                </Button>
+                <Button fx:id="reloadButton"
+                        text="↻"
+                        onAction="#reloadOrStop"
+                        styleClass="nav-button">
+                    <tooltip><Tooltip text="Reload or stop"/></tooltip>
+                </Button>
+                <Button text="⌂"
+                        onAction="#home"
+                        styleClass="nav-button">
+                    <tooltip><Tooltip text="Start page"/></tooltip>
+                </Button>
+
+                <HBox alignment="CENTER_LEFT"
+                      spacing="7.0"
+                      styleClass="omnibox"
+                      HBox.hgrow="ALWAYS">
+                    <children>
+                        <Label fx:id="securityIndicator"
+                               text="◇"
+                               styleClass="security-indicator"/>
+                        <TextField fx:id="addressField"
+                                   promptText="Enter a search or web address"
+                                   onAction="#submitAddress"
+                                   styleClass="address-field"
+                                   HBox.hgrow="ALWAYS"/>
+                        <Button text="☆"
+                                focusTraversable="false"
+                                onAction="#bookmarkPage"
+                                styleClass="omnibox-action">
+                            <tooltip><Tooltip text="Bookmark this page"/></tooltip>
+                        </Button>
+                    </children>
+                </HBox>
+
+                <Button text="⧉"
                         focusTraversable="false"
-                        styleClass="omnibox-action">
-                    <tooltip><Tooltip text="Bookmarking arrives in Phase 3"/></tooltip>
+                        onAction="#copyAddress"
+                        styleClass="toolbar-button">
+                    <tooltip><Tooltip text="Copy page address"/></tooltip>
+                </Button>
+                <MenuButton text="⋮"
+                            focusTraversable="false"
+                            styleClass="more-menu">
+                    <items>
+                        <MenuItem text="Find in page" onAction="#findInPage"/>
+                        <MenuItem text="Copy page address" onAction="#copyAddress"/>
+                        <MenuItem text="Open in default browser" onAction="#openExternally"/>
+                        <MenuItem text="Print page" onAction="#printPage"/>
+                    </items>
+                </MenuButton>
+                <Button text="☰"
+                        focusTraversable="false"
+                        onAction="#easySetup"
+                        styleClass="easy-setup-button">
+                    <tooltip><Tooltip text="Easy Setup"/></tooltip>
                 </Button>
             </children>
         </HBox>
-
-        <Button text="◫"
-                focusTraversable="false"
-                styleClass="toolbar-button">
-            <tooltip><Tooltip text="Snapshot placeholder"/></tooltip>
-        </Button>
-        <Button text="☰"
-                focusTraversable="false"
-                onAction="#easySetup"
-                styleClass="easy-setup-button">
-            <tooltip><Tooltip text="Easy Setup"/></tooltip>
-        </Button>
+        <ProgressBar fx:id="loadProgress"
+                     visible="false"
+                     managed="false"
+                     progress="-1.0"
+                     maxWidth="1.7976931348623157E308"
+                     styleClass="load-progress"/>
     </children>
-</HBox>
+</VBox>
