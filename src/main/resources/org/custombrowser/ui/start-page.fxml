@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.TilePane?>
+<?import javafx.scene.layout.VBox?>
+
+<StackPane fx:id="startPageRoot"
+           styleClass="start-page"
+           xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="org.custombrowser.ui.component.StartPageController">
+    <children>
+        <VBox alignment="TOP_CENTER"
+              spacing="24.0"
+              maxWidth="980.0"
+              styleClass="start-page-content">
+            <children>
+                <Pane minHeight="34.0"/>
+                <HBox alignment="CENTER" spacing="10.0">
+                    <children>
+                        <Label text="F" styleClass="hero-mark"/>
+                        <VBox spacing="-3.0">
+                            <children>
+                                <Label text="FLUX" styleClass="hero-title"/>
+                                <Label text="BROWSE AT FULL POWER"
+                                       styleClass="hero-subtitle"/>
+                            </children>
+                        </VBox>
+                    </children>
+                </HBox>
+
+                <HBox alignment="CENTER_LEFT"
+                      maxWidth="720.0"
+                      spacing="8.0"
+                      styleClass="start-search">
+                    <children>
+                        <Label text="⌕" styleClass="search-icon"/>
+                        <TextField fx:id="searchField"
+                                   promptText="Search the web"
+                                   onAction="#submitSearch"
+                                   styleClass="start-search-field"
+                                   HBox.hgrow="ALWAYS"/>
+                        <Button text="GO"
+                                onAction="#submitSearch"
+                                styleClass="search-submit"/>
+                    </children>
+                </HBox>
+
+                <HBox alignment="CENTER_LEFT" maxWidth="900.0">
+                    <children>
+                        <Label text="SPEED DIAL" styleClass="section-heading"/>
+                        <Pane HBox.hgrow="ALWAYS"/>
+                        <Button text="+ ADD SITE"
+                                onAction="#openNewDialEditor"
+                                styleClass="outline-button"/>
+                    </children>
+                </HBox>
+
+                <TilePane fx:id="speedDialGrid"
+                          alignment="TOP_CENTER"
+                          hgap="18.0"
+                          vgap="18.0"
+                          prefColumns="6"
+                          prefTileWidth="126.0"
+                          prefTileHeight="126.0"
+                          maxWidth="900.0"/>
+            </children>
+            <padding>
+                <Insets top="12.0" right="36.0" bottom="36.0" left="36.0"/>
+            </padding>
+        </VBox>
+
+        <StackPane fx:id="editorOverlay"
+                   visible="false"
+                   managed="false"
+                   styleClass="modal-scrim">
+            <children>
+                <VBox maxWidth="420.0"
+                      maxHeight="310.0"
+                      spacing="16.0"
+                      styleClass="editor-card">
+                    <children>
+                        <Label text="EDIT SPEED DIAL" styleClass="dialog-title"/>
+                        <Label text="Name" styleClass="field-label"/>
+                        <TextField fx:id="dialTitleField"
+                                   promptText="Example: YouTube"
+                                   styleClass="dialog-field"/>
+                        <Label text="Address" styleClass="field-label"/>
+                        <TextField fx:id="dialAddressField"
+                                   promptText="https://example.com"
+                                   onAction="#saveDial"
+                                   styleClass="dialog-field"/>
+                        <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                            <children>
+                                <Button text="CANCEL"
+                                        onAction="#cancelDialEditor"
+                                        styleClass="ghost-button"/>
+                                <Button text="SAVE"
+                                        onAction="#saveDial"
+                                        styleClass="accent-button"/>
+                            </children>
+                        </HBox>
+                    </children>
+                    <padding>
+                        <Insets top="24.0" right="24.0" bottom="24.0" left="24.0"/>
+                    </padding>
+                </VBox>
+            </children>
+        </StackPane>
+    </children>
+</StackPane>

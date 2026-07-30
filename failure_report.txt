@@ -1,0 +1,58 @@
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running org.custombrowser.navigation.NavigationResolverTest
+[ERROR] Tests run: 7, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.052 s <<< FAILURE! -- in org.custombrowser.navigation.NavigationResolverTest
+[ERROR] org.custombrowser.navigation.NavigationResolverTest.recognizesLocalhostAddress -- Time elapsed: 0.003 s <<< ERROR!
+java.lang.IllegalArgumentException: Unsupported URL scheme: localhost
+	at org.custombrowser.navigation.NavigationResolver.resolve(NavigationResolver.java:42)
+	at org.custombrowser.navigation.NavigationResolverTest.recognizesLocalhostAddress(NavigationResolverTest.java:37)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+[INFO] Running org.custombrowser.ui.BrowserUiSmokeTest
+Jul 30, 2026 11:14:45 PM com.sun.javafx.application.PlatformImpl startup
+WARNING: Unsupported JavaFX configuration: classes were loaded from 'unnamed module @5afa3c9'
+[ERROR] Tests run: 2, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 2.971 s <<< FAILURE! -- in org.custombrowser.ui.BrowserUiSmokeTest
+[ERROR] org.custombrowser.ui.BrowserUiSmokeTest.webViewLoadsPageFromLocalHttpServer -- Time elapsed: 0.270 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected: <Flux smoke test> but was: <null>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+	at org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+	at org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:177)
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1145)
+	at org.custombrowser.ui.BrowserUiSmokeTest.webViewLoadsPageFromLocalHttpServer(BrowserUiSmokeTest.java:111)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Failures: 
+[ERROR]   BrowserUiSmokeTest.webViewLoadsPageFromLocalHttpServer:111 expected: <Flux smoke test> but was: <null>
+[ERROR] Errors: 
+[ERROR]   NavigationResolverTest.recognizesLocalhostAddress:37 » IllegalArgument Unsupported URL scheme: localhost
+[INFO] 
+[ERROR] Tests run: 9, Failures: 1, Errors: 1, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  01:13 min
+[INFO] Finished at: 2026-07-30T23:14:48+06:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project flux-browser: There are test failures.
+[ERROR] 
+[ERROR] See /home/mark/Projects/Java/Flux-Browser/target/surefire-reports for the individual test results.
+[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

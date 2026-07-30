@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox prefWidth="312.0"
+      minWidth="312.0"
+      maxWidth="312.0"
+      maxHeight="1.7976931348623157E308"
+      visible="false"
+      managed="false"
+      styleClass="sidebar-panel"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="org.custombrowser.ui.component.SidebarPanelController">
+    <children>
+        <HBox alignment="CENTER_LEFT"
+              spacing="8.0"
+              styleClass="panel-header">
+            <children>
+                <Label fx:id="panelTitle"
+                       text="GX CONTROL"
+                       styleClass="panel-title"
+                       HBox.hgrow="ALWAYS"/>
+                <ToggleButton fx:id="dockButton"
+                              text="▥"
+                              selected="true"
+                              styleClass="panel-action"/>
+                <Button text="×"
+                        onAction="#closePanel"
+                        styleClass="panel-action"/>
+            </children>
+        </HBox>
+
+        <VBox fx:id="gxContent"
+              spacing="14.0"
+              styleClass="panel-content"
+              VBox.vgrow="ALWAYS">
+            <children>
+                <Label text="SYSTEM SNAPSHOT" styleClass="section-label"/>
+                <VBox spacing="6.0" styleClass="metric-card">
+                    <children>
+                        <HBox>
+                            <children>
+                                <Label text="CPU" styleClass="metric-name"/>
+                                <Pane HBox.hgrow="ALWAYS"/>
+                                <Label text="Metrics arrive in Phase 5"
+                                       styleClass="metric-value"/>
+                            </children>
+                        </HBox>
+                        <ProgressBar progress="0.18" maxWidth="1.7976931348623157E308"/>
+                    </children>
+                </VBox>
+                <VBox spacing="6.0" styleClass="metric-card">
+                    <children>
+                        <HBox>
+                            <children>
+                                <Label text="MEMORY" styleClass="metric-name"/>
+                                <Pane HBox.hgrow="ALWAYS"/>
+                                <Label text="Standby" styleClass="metric-value"/>
+                            </children>
+                        </HBox>
+                        <ProgressBar progress="0.32" maxWidth="1.7976931348623157E308"/>
+                    </children>
+                </VBox>
+                <Separator/>
+                <Label text="GX Control is visually staged in Phase 1. Live process metrics and tab suspension are implemented in Phase 5."
+                       wrapText="true"
+                       styleClass="muted-copy"/>
+            </children>
+            <padding>
+                <Insets top="18.0" right="16.0" bottom="18.0" left="16.0"/>
+            </padding>
+        </VBox>
+
+        <VBox fx:id="bookmarksContent"
+              alignment="CENTER"
+              spacing="12.0"
+              visible="false"
+              managed="false"
+              styleClass="empty-panel"
+              VBox.vgrow="ALWAYS">
+            <children>
+                <Label text="★" styleClass="empty-icon"/>
+                <Label text="NO BOOKMARKS YET" styleClass="empty-title"/>
+                <Label text="Bookmark storage arrives with PostgreSQL persistence in Phase 3."
+                       wrapText="true"
+                       textAlignment="CENTER"
+                       styleClass="muted-copy"/>
+            </children>
+        </VBox>
+
+        <VBox fx:id="historyContent"
+              alignment="CENTER"
+              spacing="12.0"
+              visible="false"
+              managed="false"
+              styleClass="empty-panel"
+              VBox.vgrow="ALWAYS">
+            <children>
+                <Label text="◷" styleClass="empty-icon"/>
+                <Label text="HISTORY" styleClass="empty-title"/>
+                <Label text="Persistent browsing history arrives in Phase 3."
+                       wrapText="true"
+                       textAlignment="CENTER"
+                       styleClass="muted-copy"/>
+            </children>
+        </VBox>
+
+        <VBox fx:id="downloadsContent"
+              alignment="CENTER"
+              spacing="12.0"
+              visible="false"
+              managed="false"
+              styleClass="empty-panel"
+              VBox.vgrow="ALWAYS">
+            <children>
+                <Label text="⇩" styleClass="empty-icon"/>
+                <Label text="DOWNLOADS" styleClass="empty-title"/>
+                <Label text="The download manager is scheduled for Phase 4."
+                       wrapText="true"
+                       textAlignment="CENTER"
+                       styleClass="muted-copy"/>
+            </children>
+        </VBox>
+
+        <VBox fx:id="settingsContent"
+              spacing="14.0"
+              visible="false"
+              managed="false"
+              styleClass="panel-content"
+              VBox.vgrow="ALWAYS">
+            <children>
+                <Label text="QUICK SETTINGS" styleClass="section-label"/>
+                <Label text="Use Easy Setup in the top-right toolbar to change accent, wallpaper, interface scale, sidebar visibility, dock mode, and reduced motion."
+                       wrapText="true"
+                       styleClass="muted-copy"/>
+                <Label text="Settings are in-memory until Phase 3."
+                       wrapText="true"
+                       styleClass="warning-copy"/>
+            </children>
+            <padding>
+                <Insets top="18.0" right="16.0" bottom="18.0" left="16.0"/>
+            </padding>
+        </VBox>
+    </children>
+</VBox>

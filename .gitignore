@@ -4,7 +4,7 @@ target/
 # Compiled class files
 *.class
 
-# Package Files
+# Package files
 *.jar
 *.war
 *.ear
@@ -17,10 +17,14 @@ target/
 .project
 .settings/
 
+# Runtime and local configuration
+*.log
+.env
+
 # OS generated files
 .DS_Store
 Thumbs.db
 
-# ideas
+# Ideas and scratch notes
 CssomParser.md
 recent_updates.md
