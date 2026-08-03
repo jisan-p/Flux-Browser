@@ -26,6 +26,8 @@ class BrowserUiStateTest {
         assertTrue(state.panelDockedProperty().get());
         assertFalse(state.reducedMotionProperty().get());
         assertEquals(13.0, state.uiScaleProperty().get());
+        assertFalse(state.autoSuspendEnabledProperty().get());
+        assertEquals(15, state.autoSuspendMinutesProperty().get());
     }
 
     @Test
@@ -81,7 +83,9 @@ class BrowserUiStateTest {
                         "sidebar_visible", "false",
                         "panel_docked", "false",
                         "reduced_motion", "true",
-                        "ui_scale", "15.5"),
+                        "ui_scale", "15.5",
+                        "auto_suspend_enabled", "true",
+                        "auto_suspend_minutes", "30"),
                 List.of(new SpeedDialEntry(
                         "Flux",
                         "https://example.com")));
@@ -92,8 +96,11 @@ class BrowserUiStateTest {
         assertFalse(state.panelDockedProperty().get());
         assertTrue(state.reducedMotionProperty().get());
         assertEquals(15.5, state.uiScaleProperty().get());
+        assertTrue(state.autoSuspendEnabledProperty().get());
+        assertEquals(30, state.autoSuspendMinutesProperty().get());
         assertEquals(1, state.speedDials().size());
         assertEquals("CYAN", state.toSettingsMap().get("accent"));
+        assertEquals("30", state.toSettingsMap().get("auto_suspend_minutes"));
     }
 
     @Test

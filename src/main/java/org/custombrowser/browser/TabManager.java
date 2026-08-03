@@ -8,6 +8,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+
+import org.custombrowser.diagnostics.PerformanceTracker;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -28,14 +31,33 @@ public final class TabManager implements AutoCloseable {
     private final Deque<ClosedTabSnapshot> closedTabs = new ArrayDeque<>();
     private final FaviconService faviconService;
     private final Consumer<URI> externalNavigationHandler;
+    private final Predicate<BrowserTab> popupPermission;
+    private final PerformanceTracker performanceTracker;
 
     public TabManager(
             FaviconService faviconService,
-            Consumer<URI> externalNavigationHandler) {
+            Consumer<URI> externalNavigationHandler,
+            Predicate<BrowserTab> popupPermission) {
+        this(
+                faviconService,
+                externalNavigationHandler,
+                popupPermission,
+                new PerformanceTracker());
+    }
+
+    public TabManager(
+            FaviconService faviconService,
+            Consumer<URI> externalNavigationHandler,
+            Predicate<BrowserTab> popupPermission,
+            PerformanceTracker performanceTracker) {
         this.faviconService = Objects.requireNonNull(
                 faviconService, "faviconService");
         this.externalNavigationHandler = Objects.requireNonNull(
                 externalNavigationHandler, "externalNavigationHandler");
+        this.popupPermission = Objects.requireNonNull(
+                popupPermission, "popupPermission");
+        this.performanceTracker = Objects.requireNonNull(
+                performanceTracker, "performanceTracker");
     }
 
     public ObservableList<BrowserTab> tabs() {
@@ -65,6 +87,16 @@ public final class TabManager implements AutoCloseable {
     }
 
     public void close(BrowserTab tab) {
+        long started = System.nanoTime();
+        try {
+            closeMeasured(tab);
+        } finally {
+            performanceTracker.recordNanos(
+                    "tab.close", System.nanoTime() - started);
+        }
+    }
+
+    private void closeMeasured(BrowserTab tab) {
         int index = tabs.indexOf(tab);
         if (index < 0) {
             return;
@@ -209,13 +241,15 @@ public final class TabManager implements AutoCloseable {
     }
 
     private BrowserTab createTab(boolean startsOnStartPage, URI address) {
-        BrowserTab tab = newBrowserTab(startsOnStartPage);
-        tabs.add(tab);
-        activeTab.set(tab);
-        if (address != null) {
-            tab.navigate(address);
-        }
-        return tab;
+        return performanceTracker.measure("tab.create", () -> {
+            BrowserTab tab = newBrowserTab(startsOnStartPage);
+            tabs.add(tab);
+            activeTab.set(tab);
+            if (address != null) {
+                tab.navigate(address);
+            }
+            return tab;
+        });
     }
 
     private BrowserTab newBrowserTab(boolean startsOnStartPage) {
@@ -224,6 +258,9 @@ public final class TabManager implements AutoCloseable {
                 externalNavigationHandler,
                 startsOnStartPage);
         tab.setPopupEngineSupplier(() -> {
+            if (!popupPermission.test(tab)) {
+                return null;
+            }
             BrowserTab popup = createTab(false, null);
             return popup.engine();
         });

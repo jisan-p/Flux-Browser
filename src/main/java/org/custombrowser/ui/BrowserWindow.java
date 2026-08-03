@@ -1,6 +1,7 @@
 package org.custombrowser.ui;
 
 import org.custombrowser.application.ApplicationContext;
+import org.custombrowser.diagnostics.PerformanceTracker;
 import org.custombrowser.persistence.PersistenceException;
 import org.custombrowser.persistence.PersistenceModels.WindowState;
 import org.custombrowser.ui.state.BrowserUiState.SidebarPanel;
@@ -51,14 +52,23 @@ public final class BrowserWindow extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        long applicationStarted = System.nanoTime();
         this.primaryStage = primaryStage;
         try {
             applicationContext = ApplicationContext.createDefault();
+            PerformanceTracker performance =
+                    applicationContext.performanceTracker();
+            performance.recordNanos(
+                    "startup.context",
+                    System.nanoTime() - applicationStarted);
             WindowState windowState = applicationContext.initialWindowState();
+            long fxmlStarted = System.nanoTime();
             FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("browser.fxml"));
             loader.setControllerFactory(applicationContext::createController);
             Parent root = loader.load();
+            performance.recordNanos(
+                    "startup.fxml", System.nanoTime() - fxmlStarted);
             BrowserController browserController = loader.getController();
             browserController.setHostServices(getHostServices());
 
@@ -69,6 +79,10 @@ public final class BrowserWindow extends Application {
             scene.setFill(Color.TRANSPARENT);
             scene.getStylesheets().add(
                     getClass().getResource("flux-gx.css").toExternalForm());
+            performance.measure("startup.css-layout", () -> {
+                root.applyCss();
+                root.layout();
+            });
             installKeyboardCommands(scene, primaryStage, browserController);
             WindowResizeSupport.install(scene, primaryStage);
 
@@ -106,6 +120,9 @@ public final class BrowserWindow extends Application {
             primaryStage.show();
             primaryStage.setMaximized(windowState.maximized());
             primaryStage.setFullScreen(windowState.fullscreen());
+            performance.recordNanos(
+                    "startup.total", System.nanoTime() - applicationStarted);
+            performance.logSummary(LOGGER, "startup");
         } catch (PersistenceException error) {
             LOGGER.error("Flux persistence startup failed: {}", error.getMessage());
             showPersistenceFailure(error);

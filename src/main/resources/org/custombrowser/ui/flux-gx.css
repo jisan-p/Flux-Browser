@@ -34,6 +34,16 @@
     -flux-accent-soft: rgba(67, 245, 154, 0.20);
 }
 
+.browser-root.accent-orange {
+    -flux-accent: #ff9f43;
+    -flux-accent-soft: rgba(255, 159, 67, 0.22);
+}
+
+.browser-root.accent-blue {
+    -flux-accent: #4d8dff;
+    -flux-accent-soft: rgba(77, 141, 255, 0.22);
+}
+
 .window-frame {
     -fx-background-color: -flux-bg-0;
     -fx-border-color: -flux-accent;
@@ -508,6 +518,19 @@
         #080910;
 }
 
+.start-page.wallpaper-circuit {
+    -fx-background-color:
+        linear-gradient(from 0px 0px to 42px 42px, transparent 48%, rgba(0, 229, 255, 0.11) 49%, rgba(0, 229, 255, 0.11) 51%, transparent 52%),
+        radial-gradient(center 48% 42%, radius 62%, -flux-accent-soft, transparent),
+        #080b11;
+}
+
+.start-page.wallpaper-sunset {
+    -fx-background-color:
+        radial-gradient(center 50% 72%, radius 42%, rgba(255, 159, 67, 0.28), transparent),
+        linear-gradient(to bottom, #161029, #330f2f 58%, #0a0911);
+}
+
 .start-page-content {
     -fx-background-color: transparent;
 }
@@ -668,7 +691,9 @@
 .accent-red-choice,
 .accent-cyan-choice,
 .accent-purple-choice,
-.accent-green-choice {
+.accent-green-choice,
+.accent-orange-choice,
+.accent-blue-choice {
     -fx-min-width: 44px;
     -fx-min-height: 34px;
     -fx-background-radius: 5px;
@@ -692,10 +717,20 @@
     -fx-background-color: #43f59a;
 }
 
+.accent-orange-choice {
+    -fx-background-color: #ff9f43;
+}
+
+.accent-blue-choice {
+    -fx-background-color: #4d8dff;
+}
+
 .accent-red-choice:selected,
 .accent-cyan-choice:selected,
 .accent-purple-choice:selected,
 .accent-green-choice:selected,
+.accent-orange-choice:selected,
+.accent-blue-choice:selected,
 .wallpaper-choice:selected {
     -fx-border-color: white;
     -fx-border-width: 2px;
@@ -780,6 +815,20 @@
     -fx-text-fill: -flux-text;
 }
 
+.download-details {
+    -fx-text-fill: -flux-text;
+    -fx-font-size: 10px;
+}
+
+.download-progress .track {
+    -fx-background-color: #262c39;
+}
+
+.download-progress .bar {
+    -fx-background-color: -flux-accent;
+    -fx-padding: 2px;
+}
+
 .data-status,
 .database-status {
     -fx-text-fill: -flux-accent;
@@ -816,6 +865,44 @@
     -fx-background-radius: 6px;
     -fx-border-color: #303646;
     -fx-border-radius: 6px;
+}
+
+.gx-control-scroll,
+.gx-control-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.gx-control-scroll .check-box {
+    -fx-text-fill: -flux-text;
+    -fx-font-size: 10px;
+}
+
+.chart {
+    -fx-padding: 5px;
+    -fx-background-color: #11151d;
+    -fx-background-radius: 6px;
+}
+
+.chart-title,
+.axis {
+    -fx-text-fill: -flux-muted;
+    -fx-tick-label-fill: -flux-muted;
+    -fx-font-size: 9px;
+}
+
+.chart-plot-background {
+    -fx-background-color: #0b0e14;
+}
+
+.chart-vertical-grid-lines,
+.chart-horizontal-grid-lines {
+    -fx-stroke: #242a36;
+}
+
+.default-color0.chart-series-line {
+    -fx-stroke: -flux-accent;
+    -fx-stroke-width: 2px;
 }
 
 .reduced-motion * {

@@ -7,4 +7,6 @@ public interface SettingsRepository {
     Map<String, String> load();
 
     void save(Map<String, String> settings);
+
+    void deleteByPrefix(String prefix);
 }

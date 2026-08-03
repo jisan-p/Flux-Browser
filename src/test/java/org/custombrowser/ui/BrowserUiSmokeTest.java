@@ -1,12 +1,15 @@
 package org.custombrowser.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.Callable;
@@ -16,6 +19,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.custombrowser.application.ApplicationContext;
+import org.custombrowser.browser.BrowserTab;
+import org.custombrowser.gx.TabSuspensionService;
+import org.custombrowser.ui.state.BrowserUiState.SidebarPanel;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -82,6 +88,29 @@ class BrowserUiSmokeTest {
             assertNotNull(loaded.root().lookup(".browser-tab"));
             assertNotNull(loaded.root().lookup(".find-bar"));
             assertNotNull(loaded.root().lookup(".error-page"));
+            BrowserController controller =
+                    assertInstanceOf(BrowserController.class, loaded.controller());
+            assertEquals(0, controller.loadedSidebarPanelCountForTesting());
+            assertNull(loaded.root().lookup("#cpuChart"));
+
+            callOnJavaFxThread(() -> {
+                controller.showSidebarPanel(SidebarPanel.GX_CONTROL);
+                return null;
+            });
+            assertNotNull(loaded.root().lookup("#cpuChart"));
+            assertNotNull(loaded.root().lookup("#memoryChart"));
+            assertNotNull(loaded.root().lookup("#hotTabList"));
+            assertEquals(1, controller.loadedSidebarPanelCountForTesting());
+
+            callOnJavaFxThread(() -> {
+                controller.showSidebarPanel(SidebarPanel.BOOKMARKS);
+                controller.showSidebarPanel(SidebarPanel.HISTORY);
+                controller.showSidebarPanel(SidebarPanel.DOWNLOADS);
+                controller.showSidebarPanel(SidebarPanel.SETTINGS);
+                return null;
+            });
+            assertNotNull(loaded.root().lookup("#settingsSearch"));
+            assertEquals(5, controller.loadedSidebarPanelCountForTesting());
         } finally {
             callOnJavaFxThread(() -> {
                 context.close();
@@ -143,6 +172,54 @@ class BrowserUiSmokeTest {
 
     @Test
     @Order(3)
+    void suspendedBackgroundTabReleasesAndRecreatesItsWebView() throws Exception {
+        ApplicationContext context = ApplicationContext.createForTests();
+        try {
+            LoadedFxml loaded = callOnJavaFxThread(() -> {
+                FXMLLoader loader = new FXMLLoader(
+                        BrowserWindow.class.getResource("browser.fxml"));
+                loader.setControllerFactory(context::createController);
+                Parent root = loader.load();
+                return new LoadedFxml(root, loader.getController());
+            });
+            BrowserController controller =
+                    assertInstanceOf(BrowserController.class, loaded.controller());
+
+            callOnJavaFxThread(() -> {
+                BrowserTab background = controller.tabManagerForTesting()
+                        .activeTab();
+                controller.newTab();
+                background.restore(
+                        URI.create("http://127.0.0.1:9/suspended"),
+                        "Suspension fixture",
+                        false,
+                        1.25,
+                        false);
+                background.webView();
+
+                TabSuspensionService suspension = new TabSuspensionService(
+                        controller.tabManagerForTesting());
+                assertTrue(suspension.suspend(background));
+                assertTrue(background.suspendedProperty().get());
+                assertTrue(background.loadedWebView().isEmpty());
+                assertEquals("Suspension fixture", background.titleProperty().get());
+                assertEquals(1.25, background.zoom());
+
+                controller.tabManagerForTesting().select(background);
+                assertFalse(background.suspendedProperty().get());
+                assertTrue(background.loadedWebView().isPresent());
+                return null;
+            });
+        } finally {
+            callOnJavaFxThread(() -> {
+                context.close();
+                return null;
+            });
+        }
+    }
+
+    @Test
+    @Order(4)
     void webViewLoadsPageFromLocalHttpServer() throws Exception {
         HttpServer server = createLocalServer();
         server.start();

@@ -33,7 +33,11 @@ public final class PersistenceModels {
             long id,
             String fileName,
             String sourceUrl,
+            String targetPath,
             String status,
+            long bytesDownloaded,
+            Long totalBytes,
+            String failureMessage,
             Instant startedAt) {
         @Override
         public String toString() {

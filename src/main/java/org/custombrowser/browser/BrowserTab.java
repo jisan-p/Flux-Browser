@@ -1,22 +1,30 @@
 package org.custombrowser.browser;
 
 import java.net.URI;
+import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
+import org.custombrowser.download.DownloadDetector;
+
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.LongProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -38,11 +46,13 @@ public final class BrowserTab {
             Set.of("mailto", "tel", "magnet");
 
     private final UUID id = UUID.randomUUID();
-    private final WebView webView = new WebView();
-    private final WebEngine engine = webView.getEngine();
-    private final WebHistory history = engine.getHistory();
     private final FaviconService faviconService;
     private final Consumer<URI> externalNavigationHandler;
+    private final Set<String> navigationAddresses = new LinkedHashSet<>();
+
+    private WebView webView;
+    private WebEngine engine;
+    private WebHistory history;
 
     private final StringProperty title = new SimpleStringProperty(DEFAULT_TITLE);
     private final StringProperty location = new SimpleStringProperty("");
@@ -51,6 +61,13 @@ public final class BrowserTab {
     private final ObjectProperty<Image> favicon = new SimpleObjectProperty<>();
     private final BooleanProperty pinned = new SimpleBooleanProperty(false);
     private final BooleanProperty startPage = new SimpleBooleanProperty(true);
+    private final BooleanProperty suspended = new SimpleBooleanProperty(false);
+    private final BooleanProperty suspensionExcluded =
+            new SimpleBooleanProperty(false);
+    private final DoubleProperty zoom = new SimpleDoubleProperty(1.0);
+    private final LongProperty lastActivityEpochMillis =
+            new SimpleLongProperty(System.currentTimeMillis());
+    private final LongProperty activityEvents = new SimpleLongProperty(0);
     private final StringProperty failureMessage = new SimpleStringProperty();
     private final ReadOnlyBooleanWrapper canGoBack =
             new ReadOnlyBooleanWrapper(false);
@@ -60,6 +77,7 @@ public final class BrowserTab {
     private URI lastRequestedUri;
     private Supplier<WebEngine> popupEngineSupplier;
     private BiConsumer<String, String> visitHandler;
+    private Consumer<URI> downloadHandler;
     private boolean handlingExternalLocation;
     private boolean restoredPagePending;
 
@@ -72,7 +90,20 @@ public final class BrowserTab {
         this.externalNavigationHandler = Objects.requireNonNull(
                 externalNavigationHandler, "externalNavigationHandler");
         startPage.set(startsOnStartPage);
+    }
+
+    private void createWebView() {
+        webView = new WebView();
+        engine = webView.getEngine();
+        history = engine.getHistory();
+        webView.setZoom(zoom.get());
         configureEngine();
+    }
+
+    private void ensureWebView() {
+        if (webView == null) {
+            createWebView();
+        }
     }
 
     private void configureEngine() {
@@ -82,7 +113,9 @@ public final class BrowserTab {
                         : newTitle));
         engine.locationProperty().addListener((observable, oldLocation, newLocation) -> {
             location.set(newLocation == null ? "" : newLocation);
-            routeExternalLocation(newLocation);
+            if (!routeDownload(newLocation)) {
+                routeExternalLocation(newLocation);
+            }
         });
         engine.getLoadWorker().runningProperty().addListener(
                 (observable, wasLoading, isLoading) -> loading.set(isLoading));
@@ -117,8 +150,13 @@ public final class BrowserTab {
         history.currentIndexProperty().addListener(
                 (observable, oldIndex, newIndex) -> updateHistoryState());
         history.getEntries().addListener(
-                (ListChangeListener<WebHistory.Entry>) change ->
-                        updateHistoryState());
+                (ListChangeListener<WebHistory.Entry>) change -> {
+                    updateHistoryState();
+                    history.getEntries().stream()
+                            .map(WebHistory.Entry::getUrl)
+                            .filter(address -> address != null && !address.isBlank())
+                            .forEach(navigationAddresses::add);
+                });
         updateHistoryState();
     }
 
@@ -127,15 +165,32 @@ public final class BrowserTab {
     }
 
     public WebView webView() {
+        if (!resume()) {
+            ensureWebView();
+        }
         return webView;
     }
 
+    public Optional<WebView> loadedWebView() {
+        return Optional.ofNullable(webView);
+    }
+
     public WebEngine engine() {
+        if (!resume()) {
+            ensureWebView();
+        }
         return engine;
     }
 
     public WebHistory history() {
+        if (!resume()) {
+            ensureWebView();
+        }
         return history;
+    }
+
+    public List<String> navigationAddresses() {
+        return List.copyOf(navigationAddresses);
     }
 
     public StringProperty titleProperty() {
@@ -166,6 +221,30 @@ public final class BrowserTab {
         return startPage;
     }
 
+    public BooleanProperty suspendedProperty() {
+        return suspended;
+    }
+
+    public BooleanProperty suspensionExcludedProperty() {
+        return suspensionExcluded;
+    }
+
+    public DoubleProperty zoomProperty() {
+        return zoom;
+    }
+
+    public LongProperty lastActivityEpochMillisProperty() {
+        return lastActivityEpochMillis;
+    }
+
+    public long lastActivityEpochMillis() {
+        return lastActivityEpochMillis.get();
+    }
+
+    public long activityEvents() {
+        return activityEvents.get();
+    }
+
     public StringProperty failureMessageProperty() {
         return failureMessage;
     }
@@ -186,16 +265,26 @@ public final class BrowserTab {
         this.visitHandler = visitHandler;
     }
 
+    public void setDownloadHandler(Consumer<URI> downloadHandler) {
+        this.downloadHandler = downloadHandler;
+    }
+
     public void navigate(URI uri) {
         Objects.requireNonNull(uri, "uri");
+        if (!resume()) {
+            ensureWebView();
+        }
+        markActivity();
         restoredPagePending = false;
         lastRequestedUri = uri;
+        navigationAddresses.add(uri.toString());
         startPage.set(false);
         failureMessage.set(null);
         engine.load(uri.toString());
     }
 
     public void showStartPage() {
+        markActivity();
         restoredPagePending = false;
         startPage.set(true);
         failureMessage.set(null);
@@ -224,6 +313,11 @@ public final class BrowserTab {
     }
 
     public void activate() {
+        markActivity();
+        if (suspended.get()) {
+            resume();
+            return;
+        }
         if (restoredPagePending && lastRequestedUri != null) {
             URI address = lastRequestedUri;
             restoredPagePending = false;
@@ -254,21 +348,83 @@ public final class BrowserTab {
     public void reloadOrStop() {
         if (loading.get()) {
             engine.getLoadWorker().cancel();
-        } else if (!location.get().isBlank()) {
+        } else if (engine != null && !location.get().isBlank()) {
             engine.reload();
+        } else if (lastRequestedUri != null) {
+            navigate(lastRequestedUri);
         }
     }
 
     public void setZoom(double zoom) {
-        webView.setZoom(zoom);
+        this.zoom.set(zoom);
+        if (webView != null) {
+            webView.setZoom(zoom);
+        }
     }
 
     public double zoom() {
-        return webView.getZoom();
+        return zoom.get();
+    }
+
+    /**
+     * Releases this tab's rendering engine while retaining reloadable metadata.
+     * Page DOM, script state, forms, and in-page history are intentionally lost.
+     */
+    public boolean suspend() {
+        if (suspended.get() || webView == null || loading.get()) {
+            return false;
+        }
+        String preservedTitle = title.get();
+        String preservedLocation = location.get();
+        Image preservedFavicon = favicon.get();
+        if (preservedLocation != null && !preservedLocation.isBlank()) {
+            try {
+                lastRequestedUri = URI.create(preservedLocation);
+            } catch (IllegalArgumentException ignored) {
+                // Keep the last known valid request instead.
+            }
+        }
+        zoom.set(webView.getZoom());
+        engine.setCreatePopupHandler(null);
+        engine.getLoadWorker().cancel();
+        engine.load(null);
+        webView = null;
+        engine = null;
+        history = null;
+        title.set(preservedTitle);
+        location.set(preservedLocation);
+        favicon.set(preservedFavicon);
+        loading.set(false);
+        progress.set(-1.0);
+        canGoBack.set(false);
+        canGoForward.set(false);
+        restoredPagePending = false;
+        suspended.set(true);
+        return true;
+    }
+
+    public boolean resume() {
+        if (!suspended.get()) {
+            return false;
+        }
+        String address = location.get();
+        createWebView();
+        suspended.set(false);
+        if (!startPage.get() && address != null && !address.isBlank()) {
+            try {
+                navigate(URI.create(address));
+            } catch (IllegalArgumentException error) {
+                failureMessage.set("The suspended tab address is no longer valid.");
+            }
+        }
+        return true;
     }
 
     public boolean find(String query, boolean backwards, boolean matchCase) {
-        if (query == null || query.isBlank() || startPage.get()) {
+        if (query == null
+                || query.isBlank()
+                || startPage.get()
+                || engine == null) {
             return false;
         }
         Object result = engine.executeScript(
@@ -283,6 +439,9 @@ public final class BrowserTab {
     }
 
     public boolean print() {
+        if (webView == null || engine == null) {
+            return false;
+        }
         PrinterJob job = PrinterJob.createPrinterJob();
         if (job == null || !job.showPrintDialog(webView.getScene().getWindow())) {
             return false;
@@ -294,12 +453,23 @@ public final class BrowserTab {
     public void dispose() {
         popupEngineSupplier = null;
         visitHandler = null;
-        engine.setCreatePopupHandler(null);
-        engine.getLoadWorker().cancel();
-        engine.load(null);
+        downloadHandler = null;
+        if (engine != null) {
+            engine.setCreatePopupHandler(null);
+            engine.getLoadWorker().cancel();
+            engine.load(null);
+        }
+        webView = null;
+        engine = null;
+        history = null;
     }
 
     private void updateHistoryState() {
+        if (history == null) {
+            canGoBack.set(false);
+            canGoForward.set(false);
+            return;
+        }
         int index = history.getCurrentIndex();
         canGoBack.set(index > 0);
         canGoForward.set(index >= 0 && index < history.getEntries().size() - 1);
@@ -342,6 +512,11 @@ public final class BrowserTab {
                 })));
     }
 
+    private void markActivity() {
+        lastActivityEpochMillis.set(Instant.now().toEpochMilli());
+        activityEvents.set(activityEvents.get() + 1);
+    }
+
     private void routeExternalLocation(String rawLocation) {
         if (handlingExternalLocation || rawLocation == null || rawLocation.isBlank()) {
             return;
@@ -373,6 +548,27 @@ public final class BrowserTab {
         } finally {
             handlingExternalLocation = false;
         }
+    }
+
+    private boolean routeDownload(String rawLocation) {
+        if (downloadHandler == null
+                || rawLocation == null
+                || rawLocation.isBlank()) {
+            return false;
+        }
+        URI uri;
+        try {
+            uri = URI.create(rawLocation);
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+        if (!DownloadDetector.isLikelyDownload(uri)) {
+            return false;
+        }
+        engine.getLoadWorker().cancel();
+        failureMessage.set(null);
+        downloadHandler.accept(uri);
+        return true;
     }
 
     private static String messageFor(Throwable error) {

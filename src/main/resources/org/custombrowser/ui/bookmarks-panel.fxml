@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox fx:id="panelRoot" spacing="9.0" styleClass="data-panel"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <TextField fx:id="bookmarkSearch" promptText="Search bookmarks"
+                   styleClass="panel-search"/>
+        <HBox spacing="6.0">
+            <children>
+                <Button text="ADD CURRENT" onAction="#bookmarkCurrentPage"
+                        styleClass="compact-action" HBox.hgrow="ALWAYS"/>
+                <Button text="OPEN" onAction="#openSelectedBookmark"
+                        styleClass="compact-action"/>
+            </children>
+        </HBox>
+        <ListView fx:id="bookmarkList" styleClass="data-list"
+                  VBox.vgrow="ALWAYS"/>
+        <Label fx:id="bookmarkStatus" text="0 BOOKMARKS"
+               styleClass="data-status"/>
+        <HBox spacing="6.0">
+            <children>
+                <Button text="DELETE SELECTED" onAction="#deleteSelectedBookmark"
+                        styleClass="compact-action"/>
+                <Button text="CLEAR ALL" onAction="#clearBookmarks"
+                        styleClass="danger-action"/>
+            </children>
+        </HBox>
+    </children>
+    <padding><Insets top="12" right="12" bottom="12" left="12"/></padding>
+</VBox>

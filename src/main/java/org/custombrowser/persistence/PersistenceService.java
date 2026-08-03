@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -16,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.custombrowser.persistence.PersistenceModels.Bookmark;
+import org.custombrowser.diagnostics.PerformanceTracker;
 import org.custombrowser.persistence.PersistenceModels.BrowserSession;
 import org.custombrowser.persistence.PersistenceModels.Download;
 import org.custombrowser.persistence.PersistenceModels.Visit;
@@ -47,27 +49,39 @@ public final class PersistenceService implements AutoCloseable {
     private final ScheduledExecutorService executor;
     private final StartupState startupState;
     private final boolean enabled;
+    private final PerformanceTracker performanceTracker;
 
     private BrowserUiState boundUiState;
     private ScheduledFuture<?> pendingSettingsSave;
     private ScheduledFuture<?> pendingSpeedDialSave;
     private ScheduledFuture<?> pendingSessionSave;
+    private boolean sessionPersistenceSuppressed;
 
     private PersistenceService(
             HikariDataSource dataSource,
             RepositorySet repositories,
             ScheduledExecutorService executor,
             StartupState startupState,
-            boolean enabled) {
+            boolean enabled,
+            PerformanceTracker performanceTracker) {
         this.dataSource = dataSource;
         this.repositories = repositories;
         this.executor = executor;
         this.startupState = startupState;
         this.enabled = enabled;
+        this.performanceTracker = Objects.requireNonNull(
+                performanceTracker, "performanceTracker");
     }
 
     public static PersistenceService open(DatabaseConfig config) {
+        return open(config, new PerformanceTracker());
+    }
+
+    public static PersistenceService open(
+            DatabaseConfig config,
+            PerformanceTracker performanceTracker) {
         Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(performanceTracker, "performanceTracker");
         HikariConfig hikari = new HikariConfig();
         hikari.setJdbcUrl(config.jdbcUrl());
         hikari.setUsername(config.username());
@@ -95,7 +109,8 @@ public final class PersistenceService implements AutoCloseable {
                     repositories,
                     newExecutor(),
                     startup,
-                    true);
+                    true,
+                    performanceTracker);
         } catch (RuntimeException error) {
             if (dataSource != null) {
                 dataSource.close();
@@ -114,6 +129,11 @@ public final class PersistenceService implements AutoCloseable {
     }
 
     public static PersistenceService forTests() {
+        return forTests(new PerformanceTracker());
+    }
+
+    public static PersistenceService forTests(
+            PerformanceTracker performanceTracker) {
         RepositorySet repositories = new RepositorySet(
                 new NoOpSettingsRepository(),
                 new NoOpSpeedDialRepository(),
@@ -126,7 +146,8 @@ public final class PersistenceService implements AutoCloseable {
                 repositories,
                 newExecutor(),
                 StartupState.empty(),
-                false);
+                false,
+                performanceTracker);
     }
 
     public StartupState startupState() {
@@ -150,6 +171,8 @@ public final class PersistenceService implements AutoCloseable {
         uiState.panelDockedProperty().addListener(settingsListener);
         uiState.reducedMotionProperty().addListener(settingsListener);
         uiState.uiScaleProperty().addListener(settingsListener);
+        uiState.autoSuspendEnabledProperty().addListener(settingsListener);
+        uiState.autoSuspendMinutesProperty().addListener(settingsListener);
         uiState.speedDials().addListener(
                 (ListChangeListener<SpeedDialEntry>) change ->
                         scheduleSpeedDialSave());
@@ -189,8 +212,48 @@ public final class PersistenceService implements AutoCloseable {
         return run(() -> repositories.visits().clear());
     }
 
+    public CompletableFuture<Integer> countVisitsBefore(Instant cutoff) {
+        return supply(() -> repositories.visits().countBefore(cutoff));
+    }
+
+    public CompletableFuture<Integer> deleteVisitsBefore(Instant cutoff) {
+        return supply(() -> repositories.visits().deleteBefore(cutoff));
+    }
+
     public CompletableFuture<List<Download>> downloads(String query) {
         return supply(() -> repositories.downloads().search(query, 250));
+    }
+
+    public CompletableFuture<Download> createDownload(
+            String sourceUrl,
+            String fileName,
+            String targetPath) {
+        return supply(() -> repositories.downloads().create(
+                sourceUrl, fileName, targetPath));
+    }
+
+    public CompletableFuture<Void> updateDownload(
+            long id,
+            String status,
+            long bytesDownloaded,
+            Long totalBytes,
+            Instant completedAt,
+            String failureMessage) {
+        return run(() -> repositories.downloads().update(
+                id,
+                status,
+                bytesDownloaded,
+                totalBytes,
+                completedAt,
+                failureMessage));
+    }
+
+    public CompletableFuture<Void> saveSetting(String key, String value) {
+        return run(() -> repositories.settings().save(Map.of(key, value)));
+    }
+
+    public CompletableFuture<Void> deleteSettingsByPrefix(String prefix) {
+        return run(() -> repositories.settings().deleteByPrefix(prefix));
     }
 
     public CompletableFuture<Void> deleteDownload(long id) {
@@ -201,8 +264,41 @@ public final class PersistenceService implements AutoCloseable {
         return run(() -> repositories.downloads().clear());
     }
 
+    public CompletableFuture<Integer> countCompletedDownloadsBefore(
+            Instant cutoff) {
+        return supply(() -> repositories.downloads()
+                .countCompletedBefore(cutoff));
+    }
+
+    public CompletableFuture<Integer> deleteCompletedDownloadsBefore(
+            Instant cutoff) {
+        return supply(() -> repositories.downloads()
+                .deleteCompletedBefore(cutoff));
+    }
+
+    public CompletableFuture<Integer> countOldSessionRecordsBefore(
+            Instant cutoff) {
+        return supply(() -> repositories.sessions()
+                .countOldSessionRecordsBefore(cutoff));
+    }
+
+    public CompletableFuture<Integer> deleteOldSessionRecordsBefore(
+            Instant cutoff) {
+        return supply(() -> repositories.sessions()
+                .deleteOldSessionRecordsBefore(cutoff));
+    }
+
+    public synchronized CompletableFuture<Void> clearSessionData() {
+        sessionPersistenceSuppressed = true;
+        if (pendingSessionSave != null) {
+            pendingSessionSave.cancel(false);
+            pendingSessionSave = null;
+        }
+        return run(() -> repositories.sessions().clearSessionData());
+    }
+
     public synchronized void saveSession(BrowserSession session) {
-        if (enabled) {
+        if (enabled && !sessionPersistenceSuppressed) {
             if (pendingSessionSave != null) {
                 pendingSessionSave.cancel(false);
             }
@@ -214,7 +310,7 @@ public final class PersistenceService implements AutoCloseable {
     }
 
     public synchronized void saveSessionNow(BrowserSession session) {
-        if (enabled) {
+        if (enabled && !sessionPersistenceSuppressed) {
             if (pendingSessionSave != null) {
                 pendingSessionSave.cancel(false);
                 pendingSessionSave = null;
@@ -284,18 +380,25 @@ public final class PersistenceService implements AutoCloseable {
 
     private CompletableFuture<Void> run(Runnable action) {
         if (!enabled) {
-            action.run();
+            performanceTracker.measure("database.operation", action);
             return CompletableFuture.completedFuture(null);
         }
-        return CompletableFuture.runAsync(action, executor)
+        return CompletableFuture.runAsync(
+                        () -> performanceTracker.measure(
+                                "database.operation", action),
+                        executor)
                 .whenComplete((unused, error) -> logAsyncFailure(error));
     }
 
     private <T> CompletableFuture<T> supply(Supplier<T> action) {
         if (!enabled) {
-            return CompletableFuture.completedFuture(action.get());
+            return CompletableFuture.completedFuture(performanceTracker.measure(
+                    "database.operation", action));
         }
-        return CompletableFuture.supplyAsync(action, executor)
+        return CompletableFuture.supplyAsync(
+                        () -> performanceTracker.measure(
+                                "database.operation", action),
+                        executor)
                 .whenComplete((unused, error) -> logAsyncFailure(error));
     }
 
@@ -378,6 +481,10 @@ public final class PersistenceService implements AutoCloseable {
         @Override
         public void save(Map<String, String> settings) {
         }
+
+        @Override
+        public void deleteByPrefix(String prefix) {
+        }
     }
 
     private static final class NoOpSpeedDialRepository
@@ -431,6 +538,16 @@ public final class PersistenceService implements AutoCloseable {
         @Override
         public void clear() {
         }
+
+        @Override
+        public int countBefore(Instant cutoff) {
+            return 0;
+        }
+
+        @Override
+        public int deleteBefore(Instant cutoff) {
+            return 0;
+        }
     }
 
     private static final class NoOpDownloadRepository
@@ -441,11 +558,48 @@ public final class PersistenceService implements AutoCloseable {
         }
 
         @Override
+        public Download create(
+                String sourceUrl,
+                String fileName,
+                String targetPath) {
+            return new Download(
+                    0,
+                    fileName,
+                    sourceUrl,
+                    targetPath,
+                    "QUEUED",
+                    0,
+                    null,
+                    null,
+                    Instant.now());
+        }
+
+        @Override
+        public void update(
+                long id,
+                String status,
+                long bytesDownloaded,
+                Long totalBytes,
+                Instant completedAt,
+                String failureMessage) {
+        }
+
+        @Override
         public void delete(long id) {
         }
 
         @Override
         public void clear() {
+        }
+
+        @Override
+        public int countCompletedBefore(Instant cutoff) {
+            return 0;
+        }
+
+        @Override
+        public int deleteCompletedBefore(Instant cutoff) {
+            return 0;
         }
     }
 
@@ -467,6 +621,20 @@ public final class PersistenceService implements AutoCloseable {
 
         @Override
         public void saveWindowState(WindowState state) {
+        }
+
+        @Override
+        public void clearSessionData() {
+        }
+
+        @Override
+        public int countOldSessionRecordsBefore(Instant cutoff) {
+            return 0;
+        }
+
+        @Override
+        public int deleteOldSessionRecordsBefore(Instant cutoff) {
+            return 0;
         }
     }
 }

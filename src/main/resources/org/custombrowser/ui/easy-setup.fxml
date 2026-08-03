@@ -35,7 +35,7 @@
         <Separator/>
 
         <Label text="ACCENT" styleClass="section-label"/>
-        <HBox spacing="9.0">
+        <HBox spacing="6.0">
             <children>
                 <ToggleButton fx:id="redAccent"
                               text="R"
@@ -53,6 +53,14 @@
                               text="G"
                               onAction="#useGreenAccent"
                               styleClass="accent-green-choice"/>
+                <ToggleButton fx:id="orangeAccent"
+                              text="O"
+                              onAction="#useOrangeAccent"
+                              styleClass="accent-orange-choice"/>
+                <ToggleButton fx:id="blueAccent"
+                              text="B"
+                              onAction="#useBlueAccent"
+                              styleClass="accent-blue-choice"/>
             </children>
         </HBox>
 
@@ -70,6 +78,18 @@
                 <ToggleButton fx:id="neonWallpaper"
                               text="NEON"
                               onAction="#useNeonWallpaper"
+                              styleClass="wallpaper-choice"/>
+            </children>
+        </HBox>
+        <HBox spacing="8.0">
+            <children>
+                <ToggleButton fx:id="circuitWallpaper"
+                              text="CIRCUIT"
+                              onAction="#useCircuitWallpaper"
+                              styleClass="wallpaper-choice"/>
+                <ToggleButton fx:id="sunsetWallpaper"
+                              text="SUNSET"
+                              onAction="#useSunsetWallpaper"
                               styleClass="wallpaper-choice"/>
             </children>
         </HBox>
@@ -92,7 +112,7 @@
         <CheckBox fx:id="reduceMotion"
                   text="Reduce interface motion"/>
 
-        <Label text="Appearance changes are stored in memory during Phase 1 and reset when Flux closes."
+        <Label text="Appearance and suspension preferences are persisted in PostgreSQL."
                wrapText="true"
                styleClass="warning-copy"/>
     </children>

@@ -95,12 +95,17 @@ public final class TabStripController {
         pin.visibleProperty().bind(tab.pinnedProperty());
         pin.managedProperty().bind(pin.visibleProperty());
 
+        Label suspended = new Label("◌");
+        suspended.getStyleClass().add("tab-pin");
+        suspended.visibleProperty().bind(tab.suspendedProperty());
+        suspended.managedProperty().bind(suspended.visibleProperty());
+
         Button close = new Button("×");
         close.getStyleClass().add("tab-close");
         close.setFocusTraversable(false);
         close.setOnAction(event -> tabManager.close(tab));
 
-        HBox header = new HBox(7, icon, title, pin, close);
+        HBox header = new HBox(7, icon, title, suspended, pin, close);
         header.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         header.setMinWidth(tab.pinnedProperty().get() ? 92 : 190);
         header.setPrefWidth(tab.pinnedProperty().get() ? 108 : 230);

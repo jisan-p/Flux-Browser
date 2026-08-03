@@ -2,8 +2,10 @@ package org.custombrowser.ui;
 
 import java.net.URI;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.Set;
@@ -11,9 +13,14 @@ import java.util.stream.Stream;
 
 import org.custombrowser.browser.BrowserTab;
 import org.custombrowser.browser.FaviconService;
+import org.custombrowser.browser.PopupPolicyService;
 import org.custombrowser.browser.TabManager;
 import org.custombrowser.browser.TabManager.TabState;
 import org.custombrowser.navigation.NavigationResolver;
+import org.custombrowser.download.DownloadDetector;
+import org.custombrowser.download.DownloadManager;
+import org.custombrowser.diagnostics.PerformanceTracker;
+import org.custombrowser.gx.TabSuspensionService;
 import org.custombrowser.navigation.NavigationResolver.NavigationTarget;
 import org.custombrowser.navigation.NavigationResolver.NavigationType;
 import org.custombrowser.persistence.PersistenceModels.BrowserSession;
@@ -32,6 +39,8 @@ import org.custombrowser.ui.state.BrowserUiState.Accent;
 import org.custombrowser.ui.state.BrowserUiState.SidebarPanel;
 
 import javafx.application.HostServices;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
@@ -45,6 +54,7 @@ import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 
 public final class BrowserController
         implements Initializable, BrowserActions, AutoCloseable {
@@ -54,14 +64,26 @@ public final class BrowserController
     private static final double ZOOM_STEP = 0.1;
     private static final double DOCKED_PANEL_WIDTH = 320.0;
     private static final List<String> ACCENT_CLASSES =
-            List.of("accent-red", "accent-cyan", "accent-purple", "accent-green");
+            List.of(
+                    "accent-red",
+                    "accent-cyan",
+                    "accent-purple",
+                    "accent-green",
+                    "accent-orange",
+                    "accent-blue");
 
     private final NavigationResolver navigationResolver;
     private final BrowserUiState uiState;
     private final TabManager tabManager;
     private final PersistenceService persistenceService;
+    private final DownloadManager downloadManager;
+    private final PopupPolicyService popupPolicyService;
+    private final TabSuspensionService suspensionService;
+    private final Timeline autoSuspendTimer;
     private final Set<String> persistentNavigationSuggestions =
             new LinkedHashSet<>();
+    private final Map<BrowserTab, TabListeners> installedTabListeners =
+            new HashMap<>();
 
     @FXML
     private StackPane browserRoot;
@@ -117,15 +139,30 @@ public final class BrowserController
             NavigationResolver navigationResolver,
             BrowserUiState uiState,
             FaviconService faviconService,
-            PersistenceService persistenceService) {
+            PersistenceService persistenceService,
+            DownloadManager downloadManager,
+            PopupPolicyService popupPolicyService,
+            PerformanceTracker performanceTracker) {
         this.navigationResolver = Objects.requireNonNull(
                 navigationResolver, "navigationResolver");
         this.uiState = Objects.requireNonNull(uiState, "uiState");
         this.persistenceService = Objects.requireNonNull(
                 persistenceService, "persistenceService");
+        this.downloadManager = Objects.requireNonNull(
+                downloadManager, "downloadManager");
+        this.popupPolicyService = Objects.requireNonNull(
+                popupPolicyService, "popupPolicyService");
         tabManager = new TabManager(
                 Objects.requireNonNull(faviconService, "faviconService"),
-                this::requestExternalNavigation);
+                this::requestExternalNavigation,
+                this::allowPopup,
+                Objects.requireNonNull(
+                        performanceTracker, "performanceTracker"));
+        suspensionService = new TabSuspensionService(tabManager);
+        autoSuspendTimer = new Timeline(new KeyFrame(
+                Duration.seconds(15),
+                event -> runAutoSuspension()));
+        autoSuspendTimer.setCycleCount(Timeline.INDEFINITE);
     }
 
     @Override
@@ -135,6 +172,7 @@ public final class BrowserController
         tabStripController.setTabManager(tabManager);
         sidebarController.setActions(this);
         sidebarPanelController.setActions(this);
+        sidebarPanelController.setTabManager(tabManager);
         startPageController.setActions(this);
         findBarController.setActions(this);
         errorPageController.setActions(this);
@@ -174,6 +212,7 @@ public final class BrowserController
         hideFindBar();
         restoreSession();
         loadPersistentNavigationSuggestions();
+        autoSuspendTimer.play();
     }
 
     public void setHostServices(HostServices hostServices) {
@@ -186,6 +225,10 @@ public final class BrowserController
             NavigationTarget target = navigationResolver.resolve(input);
             if (target.type() == NavigationType.EXTERNAL) {
                 requestExternalNavigation(target.uri());
+                return;
+            }
+            if (DownloadDetector.isLikelyDownload(target.uri())) {
+                requestDownload(target.uri());
                 return;
             }
             activeTab().navigate(target.uri());
@@ -349,14 +392,37 @@ public final class BrowserController
         uiState.activeSidebarPanelProperty().set(panel);
     }
 
+    TabManager tabManagerForTesting() {
+        return tabManager;
+    }
+
+    int loadedSidebarPanelCountForTesting() {
+        return sidebarPanelController.loadedPanelCount();
+    }
+
     @Override
     public void close() {
+        autoSuspendTimer.stop();
+        sidebarPanelController.close();
         persistenceService.saveSessionNow(sessionSnapshot());
+        List.copyOf(installedTabListeners.keySet())
+                .forEach(this::removeActiveStateListeners);
         tabManager.close();
+    }
+
+    private void runAutoSuspension() {
+        if (!uiState.autoSuspendEnabledProperty().get()) {
+            return;
+        }
+        suspensionService.suspendInactive(java.time.Duration.ofMinutes(
+                uiState.autoSuspendMinutesProperty().get()));
     }
 
     private void tabsChanged(ListChangeListener.Change<? extends BrowserTab> change) {
         while (change.next()) {
+            if (change.wasRemoved()) {
+                change.getRemoved().forEach(this::removeActiveStateListeners);
+            }
             if (change.wasAdded()) {
                 change.getAddedSubList().forEach(this::installActiveStateListener);
             }
@@ -373,27 +439,54 @@ public final class BrowserController
                         navigationSuggestions());
             }
         });
-        if (Boolean.TRUE.equals(tab.webView().getProperties()
-                .putIfAbsent("flux-state-listener-installed", Boolean.TRUE))) {
+        tab.setDownloadHandler(this::requestDownload);
+        if (installedTabListeners.containsKey(tab)) {
             return;
         }
-        InvalidationListener listener = observable -> {
+        InvalidationListener displayListener = observable -> {
             if (tab == tabManager.activeTab()) {
                 displayActiveTab();
             }
         };
-        tab.locationProperty().addListener(listener);
-        tab.loadingProperty().addListener(listener);
-        tab.progressProperty().addListener(listener);
-        tab.startPageProperty().addListener(listener);
-        tab.failureMessageProperty().addListener(listener);
-        tab.canGoBackProperty().addListener(listener);
-        tab.canGoForwardProperty().addListener(listener);
-        tab.titleProperty().addListener(observable -> persistSession());
-        tab.locationProperty().addListener(observable -> persistSession());
-        tab.pinnedProperty().addListener(observable -> persistSession());
-        tab.startPageProperty().addListener(observable -> persistSession());
-        tab.webView().zoomProperty().addListener(observable -> persistSession());
+        InvalidationListener persistenceListener = observable -> persistSession();
+        installedTabListeners.put(
+                tab, new TabListeners(displayListener, persistenceListener));
+        tab.locationProperty().addListener(displayListener);
+        tab.loadingProperty().addListener(displayListener);
+        tab.progressProperty().addListener(displayListener);
+        tab.startPageProperty().addListener(displayListener);
+        tab.suspendedProperty().addListener(displayListener);
+        tab.failureMessageProperty().addListener(displayListener);
+        tab.canGoBackProperty().addListener(displayListener);
+        tab.canGoForwardProperty().addListener(displayListener);
+        tab.titleProperty().addListener(persistenceListener);
+        tab.locationProperty().addListener(persistenceListener);
+        tab.pinnedProperty().addListener(persistenceListener);
+        tab.startPageProperty().addListener(persistenceListener);
+        tab.zoomProperty().addListener(persistenceListener);
+    }
+
+    private void removeActiveStateListeners(BrowserTab tab) {
+        TabListeners listeners = installedTabListeners.remove(tab);
+        if (listeners == null) {
+            return;
+        }
+        InvalidationListener displayListener = listeners.displayListener();
+        InvalidationListener persistenceListener =
+                listeners.persistenceListener();
+        tab.locationProperty().removeListener(displayListener);
+        tab.loadingProperty().removeListener(displayListener);
+        tab.progressProperty().removeListener(displayListener);
+        tab.startPageProperty().removeListener(displayListener);
+        tab.suspendedProperty().removeListener(displayListener);
+        tab.failureMessageProperty().removeListener(displayListener);
+        tab.canGoBackProperty().removeListener(displayListener);
+        tab.canGoForwardProperty().removeListener(displayListener);
+        tab.titleProperty().removeListener(persistenceListener);
+        tab.locationProperty().removeListener(persistenceListener);
+        tab.pinnedProperty().removeListener(persistenceListener);
+        tab.startPageProperty().removeListener(persistenceListener);
+        tab.zoomProperty().removeListener(persistenceListener);
     }
 
     private void displayActiveTab() {
@@ -404,7 +497,9 @@ public final class BrowserController
         tab.activate();
 
         boolean onStartPage = tab.startPageProperty().get();
-        webViewHost.getChildren().setAll(tab.webView());
+        webViewHost.getChildren().setAll(onStartPage
+                ? List.of()
+                : List.of(tab.webView()));
         webViewHost.setVisible(!onStartPage);
         webViewHost.setManaged(!onStartPage);
         startPage.setVisible(onStartPage);
@@ -488,8 +583,7 @@ public final class BrowserController
         Stream<String> speedDials = uiState.speedDials().stream()
                 .map(entry -> entry.address());
         Stream<String> history = tabManager.tabs().stream()
-                .flatMap(tab -> tab.history().getEntries().stream())
-                .map(entry -> entry.getUrl());
+                .flatMap(tab -> tab.navigationAddresses().stream());
         return Stream.concat(
                         Stream.concat(speedDials, history),
                         persistentNavigationSuggestions.stream())
@@ -533,6 +627,30 @@ public final class BrowserController
         confirmation.showAndWait()
                 .filter(open::equals)
                 .ifPresent(button -> hostServices.showDocument(uri.toString()));
+    }
+
+    private void requestDownload(URI uri) {
+        javafx.stage.Window owner = browserRoot.getScene() == null
+                ? null
+                : browserRoot.getScene().getWindow();
+        if (downloadManager.chooseAndStart(uri, owner)) {
+            showSidebarPanel(SidebarPanel.DOWNLOADS);
+        }
+    }
+
+    private boolean allowPopup(BrowserTab sourceTab) {
+        URI origin = null;
+        try {
+            String location = sourceTab.locationProperty().get();
+            if (location != null && !location.isBlank()) {
+                origin = URI.create(location);
+            }
+        } catch (IllegalArgumentException ignored) {
+        }
+        javafx.stage.Window owner = browserRoot.getScene() == null
+                ? null
+                : browserRoot.getScene().getWindow();
+        return popupPolicyService.allowPopup(origin, owner);
     }
 
     private URI activeAddress() {
@@ -587,5 +705,10 @@ public final class BrowserController
     private void applyUiScale(double scale) {
         double clamped = Math.max(11.0, Math.min(16.0, scale));
         browserRoot.setStyle("-fx-font-size: %.1fpx;".formatted(clamped));
+    }
+
+    private record TabListeners(
+            InvalidationListener displayListener,
+            InvalidationListener persistenceListener) {
     }
 }

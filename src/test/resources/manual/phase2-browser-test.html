@@ -44,5 +44,25 @@
         Open mail application
       </a>
     </p>
+    <p>
+      <a href="phase4-download.zip">Download Phase 4 fixture</a>
+    </p>
+    <p>
+      <button type="button"
+              onclick="document.cookie='flux_phase4=present; path=/'; document.querySelector('#cookie-value').textContent=document.cookie">
+        Set test cookie
+      </button>
+      <button type="button"
+              onclick="document.querySelector('#cookie-value').textContent=document.cookie || '(empty)'">
+        Show cookies
+      </button>
+    </p>
+    <p id="cookie-value">Cookie value appears here.</p>
+    <p>
+      <label for="suspension-state">Unsaved suspension test value:</label>
+      <input id="suspension-state"
+             type="text"
+             placeholder="Type UNSAVED-FLUX-STATE">
+    </p>
   </body>
 </html>

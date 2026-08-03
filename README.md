@@ -2,7 +2,7 @@
 
 Flux Browser is a lightweight desktop browser built with Java 21, JavaFX, FXML, and CSS. The project is being developed phase-by-phase toward an Opera GX-inspired interface while retaining JavaFX `WebView` as its browser engine.
 
-## Implemented through Phase 3
+## Implemented through Phase 6
 
 - Standard Maven project targeting Java 21.
 - JavaFX controls, FXML, and WebView integration.
@@ -13,7 +13,7 @@ Flux Browser is a lightweight desktop browser built with Java 21, JavaFX, FXML, 
 - Reproducible Maven build/test container.
 - Undecorated Flux GX window shell with draggable title bar and native window actions.
 - GX-inspired tab strip, navigation bar, vertical sidebar, overlay/docked panels, and start page.
-- Editable and reorderable in-memory Speed Dial.
+- Editable, reorderable, and persistent Speed Dial.
 - Easy Setup controls for accent, wallpaper, UI scale, sidebar visibility, panel docking, and reduced motion.
 - Independent `WebView`, history, load state, title, favicon, zoom, and failure state for every tab.
 - New, close, reopen, duplicate, pin, reorder, close-others, close-right, middle-click close, and popup-created tabs.
@@ -27,6 +27,36 @@ Flux Browser is a lightweight desktop browser built with Java 21, JavaFX, FXML, 
 - Lazy session restoration: only the selected restored tab loads at startup.
 - Searchable bookmarks, history, downloads metadata, and settings sidebar pages with selected-item deletion and confirmed clear-data actions.
 - Actionable startup dialog when PostgreSQL is unavailable or the Phase 3 schema has not been initialized.
+- Asynchronous HTTP downloads streamed into `.part` files with timeouts, redirects, sanitized filenames, and collision-safe destinations.
+- Live download progress with cancel, retry, open, reveal, persisted metadata, and failure recovery.
+- Conservative WebView download-link detection for common archive, installer, document, and disk-image extensions.
+- Per-site popup decisions with ask, allow, block, persistent “always allow,” and permission reset.
+- Browsing-data controls for history, download metadata, current-process cookies, favicon cache, and saved session data.
+- Graceful shutdown that disposes WebViews, cancels transfers, drains persistence work, and closes HikariCP without using `System.exit` as normal lifecycle control.
+- OSHI-backed process CPU, resident-memory, JVM heap/non-heap, and open-tab metrics sampled outside the JavaFX thread while GX Control is open.
+- Bounded live CPU and memory charts in the GX Control sidebar with explicit process-wide labeling.
+- Manual background-tab suspension that releases the WebView while retaining URL, title, favicon, and zoom metadata.
+- Optional inactivity-based auto-suspension with persistent timeout settings and protection for active, pinned, loading, Start Page, and Keep Active tabs.
+- Hot Tabs activity ranking based on recency, navigation, and load-state heuristics rather than invented per-tab hardware readings.
+- GX Cleaner preview and confirmed selective cleanup for 30-day-old history, completed download metadata, favicon cache, stale saved sessions, and old recently-closed-tab metadata; the newest saved session is protected.
+- Expanded orange/blue accent presets plus Circuit and Sunset wallpapers.
+- Lazy WebView allocation: Start Page and inactive restored tabs do not create a
+  rendering engine until a page must be displayed.
+- Independently lazy-loaded GX Control, bookmarks, history, downloads, and
+  settings FXML panels.
+- Bounded favicon (256 entries), recently closed tab (20 entries), live chart
+  (60 points), and completed download task (100 entries) retention.
+- Aggregate startup, CSS/layout, tab lifecycle, database operation, and JVM heap
+  diagnostics in the application log without retaining browsing data.
+- Explicit listener detachment and executor/resource shutdown paths for tabs,
+  sidebar panels, downloads, monitoring, persistence, and WebViews.
+
+## Documentation
+
+- [User guide](docs/USER_GUIDE.md)
+- [Architecture and lifecycle](docs/ARCHITECTURE.md)
+- [Performance testing](docs/PERFORMANCE_TESTING.md)
+- [Cross-platform smoke-test checklist](docs/CROSS_PLATFORM_CHECKLIST.md)
 
 ## Prerequisites
 
@@ -136,5 +166,19 @@ Do not commit production credentials. The fixed password in Compose is for local
 - Change persistent appearance settings from Easy Setup.
 - Use the omnibox star to save the current page as a bookmark.
 - Search, open, delete, or clear bookmarks and persistent browsing history from the sidebar.
+- Select likely download links or enter a direct archive/document URL to open the save chooser.
+- Use Downloads to monitor progress and cancel, retry, open, or reveal transfers.
+- Use Settings to clear supported browsing-data categories and reset popup permissions.
+- Use GX Control to monitor process resources, inspect heuristic Hot Tabs, suspend background tabs, and mark tabs Keep Active.
+- Enable automatic suspension and select an inactivity window from 1–60 minutes.
+- Preview GX Cleaner counts before deleting only the selected 30-day-old metadata categories.
 
-Download transfer handling remains scheduled for Phase 4; Phase 3 supplies and displays its PostgreSQL metadata model. GX Control metrics and tab suspension remain scheduled for Phase 5.
+## JavaFX WebView limitations
+
+JavaFX WebView has no supported general download callback and does not expose response `Content-Disposition` headers. Flux therefore detects common download filename extensions in navigations. A server-generated download URL without a recognizable extension may not be intercepted.
+
+JavaFX also provides no supported public API for clearing its internal HTTP cache. Flux does not use unsupported reflective access and does not claim that clearing history, cookies, or favicon data clears WebView’s internal cache. Cookie clearing affects cookies held by the current Flux process. Clearing download metadata never deletes downloaded files.
+
+JavaFX WebView is not Chromium and cannot reliably play every modern adaptive-streaming or DRM video site. In particular, YouTube playback can remain stuck even when the page itself loads. Use the operating-system browser for sites that exceed WebView's media support.
+
+JavaFX does not expose trustworthy per-WebView CPU or memory measurements. GX Control therefore labels OSHI measurements as process-wide, and Hot Tabs is explicitly an activity heuristic. Suspending a tab discards DOM, form, media, and script state; resuming reloads the saved URL.

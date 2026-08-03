@@ -8,9 +8,11 @@ import org.custombrowser.ui.model.SpeedDialEntry;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -18,8 +20,8 @@ import javafx.collections.ObservableList;
 /**
  * Shared, in-memory browser UI preferences.
  *
- * <p>PostgreSQL persistence is introduced in Phase 3. Until then these values
- * intentionally reset when Flux restarts.</p>
+ * <p>Persistent fields are stored through the settings repository; transient
+ * panel visibility remains process-local.</p>
  */
 public final class BrowserUiState {
 
@@ -39,6 +41,10 @@ public final class BrowserUiState {
             new SimpleBooleanProperty(false);
     private final DoubleProperty uiScale =
             new SimpleDoubleProperty(13.0);
+    private final BooleanProperty autoSuspendEnabled =
+            new SimpleBooleanProperty(false);
+    private final IntegerProperty autoSuspendMinutes =
+            new SimpleIntegerProperty(15);
     private final ObservableList<SpeedDialEntry> speedDials =
             FXCollections.observableArrayList(
                     new SpeedDialEntry("YouTube", "https://youtube.com"),
@@ -80,6 +86,14 @@ public final class BrowserUiState {
         return uiScale;
     }
 
+    public BooleanProperty autoSuspendEnabledProperty() {
+        return autoSuspendEnabled;
+    }
+
+    public IntegerProperty autoSuspendMinutesProperty() {
+        return autoSuspendMinutes;
+    }
+
     public ObservableList<SpeedDialEntry> speedDials() {
         return speedDials;
     }
@@ -109,6 +123,14 @@ public final class BrowserUiState {
                 13.0,
                 11.0,
                 16.0));
+        autoSuspendEnabled.set(booleanValue(
+                settings.get("auto_suspend_enabled"),
+                false));
+        autoSuspendMinutes.set(integerValue(
+                settings.get("auto_suspend_minutes"),
+                15,
+                1,
+                120));
         if (persistedSpeedDials != null && !persistedSpeedDials.isEmpty()) {
             speedDials.setAll(persistedSpeedDials);
         }
@@ -122,6 +144,10 @@ public final class BrowserUiState {
         values.put("panel_docked", Boolean.toString(panelDocked.get()));
         values.put("reduced_motion", Boolean.toString(reducedMotion.get()));
         values.put("ui_scale", Double.toString(uiScale.get()));
+        values.put("auto_suspend_enabled",
+                Boolean.toString(autoSuspendEnabled.get()));
+        values.put("auto_suspend_minutes",
+                Integer.toString(autoSuspendMinutes.get()));
         return Map.copyOf(values);
     }
 
@@ -164,11 +190,28 @@ public final class BrowserUiState {
         }
     }
 
+    private static int integerValue(
+            String value,
+            int fallback,
+            int minimum,
+            int maximum) {
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            return Math.max(minimum, Math.min(maximum, Integer.parseInt(value)));
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
     public enum Accent {
         RED("accent-red"),
         CYAN("accent-cyan"),
         PURPLE("accent-purple"),
-        GREEN("accent-green");
+        GREEN("accent-green"),
+        ORANGE("accent-orange"),
+        BLUE("accent-blue");
 
         private final String styleClass;
 
@@ -184,7 +227,9 @@ public final class BrowserUiState {
     public enum Wallpaper {
         GRID("wallpaper-grid"),
         VOID("wallpaper-void"),
-        NEON("wallpaper-neon");
+        NEON("wallpaper-neon"),
+        CIRCUIT("wallpaper-circuit"),
+        SUNSET("wallpaper-sunset");
 
         private final String styleClass;
 

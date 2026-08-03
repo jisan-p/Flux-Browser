@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -92,6 +93,45 @@ final class PostgresRepositories {
                 throw failure(operation, error);
             }
         }
+
+        int countBefore(
+                String table,
+                String timestampColumn,
+                String additionalPredicate,
+                Instant cutoff,
+                String operation) {
+            String sql = "SELECT count(*) FROM " + prefix + table
+                    + " WHERE " + timestampColumn + " < ?"
+                    + additionalPredicate;
+            try (Connection connection = dataSource.getConnection();
+                    PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setTimestamp(1, java.sql.Timestamp.from(cutoff));
+                try (ResultSet result = statement.executeQuery()) {
+                    result.next();
+                    return result.getInt(1);
+                }
+            } catch (SQLException error) {
+                throw failure(operation, error);
+            }
+        }
+
+        int deleteBefore(
+                String table,
+                String timestampColumn,
+                String additionalPredicate,
+                Instant cutoff,
+                String operation) {
+            String sql = "DELETE FROM " + prefix + table
+                    + " WHERE " + timestampColumn + " < ?"
+                    + additionalPredicate;
+            try (Connection connection = dataSource.getConnection();
+                    PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setTimestamp(1, java.sql.Timestamp.from(cutoff));
+                return statement.executeUpdate();
+            } catch (SQLException error) {
+                throw failure(operation, error);
+            }
+        }
     }
 
     private static final class JdbcSettingsRepository
@@ -141,6 +181,19 @@ final class PostgresRepositories {
                 statement.executeBatch();
             } catch (SQLException error) {
                 throw failure("settings save", error);
+            }
+        }
+
+        @Override
+        public void deleteByPrefix(String settingPrefix) {
+            String sql = "DELETE FROM " + prefix
+                    + "settings WHERE setting_key LIKE ?";
+            try (Connection connection = dataSource.getConnection();
+                    PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, settingPrefix + "%");
+                statement.executeUpdate();
+            } catch (SQLException error) {
+                throw failure("settings deletion", error);
             }
         }
     }
@@ -392,6 +445,26 @@ final class PostgresRepositories {
         public void clear() {
             deleteAll("visits", "history clear");
         }
+
+        @Override
+        public int countBefore(Instant cutoff) {
+            return countBefore(
+                    "visits",
+                    "visited_at",
+                    "",
+                    cutoff,
+                    "expired history preview");
+        }
+
+        @Override
+        public int deleteBefore(Instant cutoff) {
+            return deleteBefore(
+                    "visits",
+                    "visited_at",
+                    "",
+                    cutoff,
+                    "expired history cleanup");
+        }
     }
 
     private static final class JdbcDownloadRepository
@@ -407,7 +480,11 @@ final class PostgresRepositories {
                     SELECT download_id,
                            file_name,
                            source_url,
+                           target_path,
                            status,
+                           bytes_downloaded,
+                           total_bytes,
+                           failure_message,
                            started_at
                     FROM %sdownloads
                     WHERE lower(file_name) LIKE ?
@@ -430,13 +507,94 @@ final class PostgresRepositories {
                                 results.getLong("download_id"),
                                 results.getString("file_name"),
                                 results.getString("source_url"),
+                                results.getString("target_path"),
                                 results.getString("status"),
+                                results.getLong("bytes_downloaded"),
+                                nullableLong(results, "total_bytes"),
+                                results.getString("failure_message"),
                                 results.getTimestamp("started_at").toInstant()));
                     }
                 }
                 return downloads;
             } catch (SQLException error) {
                 throw failure("download search", error);
+            }
+        }
+
+        @Override
+        public Download create(
+                String sourceUrl,
+                String fileName,
+                String targetPath) {
+            String sql = """
+                    INSERT INTO %sdownloads (
+                        source_url,
+                        file_name,
+                        target_path,
+                        status
+                    )
+                    VALUES (?, ?, ?, 'QUEUED')
+                    RETURNING download_id, started_at
+                    """.formatted(prefix);
+            try (Connection connection = dataSource.getConnection();
+                    PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, sourceUrl);
+                statement.setString(2, truncate(fileName, 500));
+                statement.setString(3, targetPath);
+                try (ResultSet result = statement.executeQuery()) {
+                    result.next();
+                    return new Download(
+                            result.getLong("download_id"),
+                            fileName,
+                            sourceUrl,
+                            targetPath,
+                            "QUEUED",
+                            0,
+                            null,
+                            null,
+                            result.getTimestamp("started_at").toInstant());
+                }
+            } catch (SQLException error) {
+                throw failure("download creation", error);
+            }
+        }
+
+        @Override
+        public void update(
+                long id,
+                String status,
+                long bytesDownloaded,
+                Long totalBytes,
+                java.time.Instant completedAt,
+                String failureMessage) {
+            String sql = """
+                    UPDATE %sdownloads
+                    SET status = ?,
+                        bytes_downloaded = ?,
+                        total_bytes = ?,
+                        completed_at = ?,
+                        failure_message = ?
+                    WHERE download_id = ?
+                    """.formatted(prefix);
+            try (Connection connection = dataSource.getConnection();
+                    PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, status);
+                statement.setLong(2, bytesDownloaded);
+                if (totalBytes == null) {
+                    statement.setNull(3, java.sql.Types.BIGINT);
+                } else {
+                    statement.setLong(3, totalBytes);
+                }
+                if (completedAt == null) {
+                    statement.setNull(4, java.sql.Types.TIMESTAMP_WITH_TIMEZONE);
+                } else {
+                    statement.setObject(4, completedAt);
+                }
+                statement.setString(5, failureMessage);
+                statement.setLong(6, id);
+                statement.executeUpdate();
+            } catch (SQLException error) {
+                throw failure("download update", error);
             }
         }
 
@@ -448,6 +606,26 @@ final class PostgresRepositories {
         @Override
         public void clear() {
             deleteAll("downloads", "download clear");
+        }
+
+        @Override
+        public int countCompletedBefore(Instant cutoff) {
+            return countBefore(
+                    "downloads",
+                    "completed_at",
+                    " AND status = 'COMPLETED'",
+                    cutoff,
+                    "completed download preview");
+        }
+
+        @Override
+        public int deleteCompletedBefore(Instant cutoff) {
+            return deleteBefore(
+                    "downloads",
+                    "completed_at",
+                    " AND status = 'COMPLETED'",
+                    cutoff,
+                    "completed download cleanup");
         }
     }
 
@@ -656,6 +834,87 @@ final class PostgresRepositories {
             }
         }
 
+        @Override
+        public void clearSessionData() {
+            String sessions = "DELETE FROM " + prefix + "browser_sessions";
+            String closed = "DELETE FROM " + prefix + "recently_closed_tabs";
+            try (Connection connection = dataSource.getConnection()) {
+                connection.setAutoCommit(false);
+                try (Statement statement = connection.createStatement()) {
+                    statement.executeUpdate(sessions);
+                    statement.executeUpdate(closed);
+                    connection.commit();
+                } catch (SQLException error) {
+                    connection.rollback();
+                    throw error;
+                }
+            } catch (SQLException error) {
+                throw failure("session data clear", error);
+            }
+        }
+
+        @Override
+        public int countOldSessionRecordsBefore(Instant cutoff) {
+            String sql = """
+                    SELECT
+                        (SELECT count(*)
+                           FROM %srecently_closed_tabs
+                          WHERE closed_at < ?)
+                      + (SELECT count(*)
+                           FROM %sbrowser_sessions
+                          WHERE saved_at < ?
+                            AND session_id <>
+                                (SELECT session_id
+                                   FROM %sbrowser_sessions
+                                  ORDER BY saved_at DESC
+                                  LIMIT 1))
+                    """.formatted(prefix, prefix, prefix);
+            try (Connection connection = dataSource.getConnection();
+                    PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setTimestamp(1, java.sql.Timestamp.from(cutoff));
+                statement.setTimestamp(2, java.sql.Timestamp.from(cutoff));
+                try (ResultSet result = statement.executeQuery()) {
+                    result.next();
+                    return result.getInt(1);
+                }
+            } catch (SQLException error) {
+                throw failure("old session metadata preview", error);
+            }
+        }
+
+        @Override
+        public int deleteOldSessionRecordsBefore(Instant cutoff) {
+            String deleteClosed = "DELETE FROM " + prefix
+                    + "recently_closed_tabs WHERE closed_at < ?";
+            String deleteSessions = """
+                    DELETE FROM %sbrowser_sessions
+                    WHERE saved_at < ?
+                      AND session_id <>
+                          (SELECT session_id
+                             FROM %sbrowser_sessions
+                            ORDER BY saved_at DESC
+                            LIMIT 1)
+                    """.formatted(prefix, prefix);
+            try (Connection connection = dataSource.getConnection()) {
+                connection.setAutoCommit(false);
+                try (PreparedStatement closed =
+                            connection.prepareStatement(deleteClosed);
+                        PreparedStatement sessions =
+                            connection.prepareStatement(deleteSessions)) {
+                    closed.setTimestamp(1, java.sql.Timestamp.from(cutoff));
+                    sessions.setTimestamp(1, java.sql.Timestamp.from(cutoff));
+                    int removed = closed.executeUpdate() + sessions.executeUpdate();
+                    connection.commit();
+                    return removed;
+                } catch (SQLException error) {
+                    connection.rollback();
+                    throw error;
+                }
+            } catch (SQLException error) {
+                throw failure("old session metadata cleanup", error);
+            }
+        }
+
         private static StoredTab storedTab(
                 ResultSet results,
                 boolean hasId) throws SQLException {
@@ -697,6 +956,13 @@ final class PostgresRepositories {
             ResultSet result,
             String column) throws SQLException {
         double value = result.getDouble(column);
+        return result.wasNull() ? null : value;
+    }
+
+    private static Long nullableLong(
+            ResultSet result,
+            String column) throws SQLException {
+        long value = result.getLong(column);
         return result.wasNull() ? null : value;
     }
 

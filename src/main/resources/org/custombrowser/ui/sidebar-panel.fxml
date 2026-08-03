@@ -1,15 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ListView?>
-<?import javafx.scene.control.ProgressBar?>
-<?import javafx.scene.control.Separator?>
-<?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox prefWidth="312.0"
@@ -26,7 +21,7 @@
         <HBox alignment="CENTER_LEFT" spacing="8.0" styleClass="panel-header">
             <children>
                 <Label fx:id="panelTitle"
-                       text="GX CONTROL"
+                       text=""
                        styleClass="panel-title"
                        HBox.hgrow="ALWAYS"/>
                 <ToggleButton fx:id="dockButton"
@@ -38,205 +33,6 @@
                         styleClass="panel-action"/>
             </children>
         </HBox>
-
-        <VBox fx:id="gxContent"
-              spacing="14.0"
-              styleClass="panel-content"
-              VBox.vgrow="ALWAYS">
-            <children>
-                <Label text="SYSTEM SNAPSHOT" styleClass="section-label"/>
-                <VBox spacing="6.0" styleClass="metric-card">
-                    <children>
-                        <HBox>
-                            <children>
-                                <Label text="CPU" styleClass="metric-name"/>
-                                <Pane HBox.hgrow="ALWAYS"/>
-                                <Label text="Metrics arrive in Phase 5"
-                                       styleClass="metric-value"/>
-                            </children>
-                        </HBox>
-                        <ProgressBar progress="0.18"
-                                     maxWidth="1.7976931348623157E308"/>
-                    </children>
-                </VBox>
-                <VBox spacing="6.0" styleClass="metric-card">
-                    <children>
-                        <HBox>
-                            <children>
-                                <Label text="MEMORY" styleClass="metric-name"/>
-                                <Pane HBox.hgrow="ALWAYS"/>
-                                <Label text="Standby" styleClass="metric-value"/>
-                            </children>
-                        </HBox>
-                        <ProgressBar progress="0.32"
-                                     maxWidth="1.7976931348623157E308"/>
-                    </children>
-                </VBox>
-                <Separator/>
-                <Label text="Live process metrics and tab suspension arrive in Phase 5."
-                       wrapText="true"
-                       styleClass="muted-copy"/>
-            </children>
-            <padding>
-                <Insets top="18.0" right="16.0" bottom="18.0" left="16.0"/>
-            </padding>
-        </VBox>
-
-        <VBox fx:id="bookmarksContent"
-              spacing="9.0"
-              visible="false"
-              managed="false"
-              styleClass="data-panel"
-              VBox.vgrow="ALWAYS">
-            <children>
-                <TextField fx:id="bookmarkSearch"
-                           promptText="Search bookmarks"
-                           styleClass="panel-search"/>
-                <HBox spacing="6.0">
-                    <children>
-                        <Button text="ADD CURRENT"
-                                onAction="#bookmarkCurrentPage"
-                                styleClass="compact-action"
-                                HBox.hgrow="ALWAYS"/>
-                        <Button text="OPEN"
-                                onAction="#openSelectedBookmark"
-                                styleClass="compact-action"/>
-                    </children>
-                </HBox>
-                <ListView fx:id="bookmarkList"
-                          styleClass="data-list"
-                          VBox.vgrow="ALWAYS"/>
-                <Label fx:id="bookmarkStatus"
-                       text="0 BOOKMARKS"
-                       styleClass="data-status"/>
-                <HBox spacing="6.0">
-                    <children>
-                        <Button text="DELETE SELECTED"
-                                onAction="#deleteSelectedBookmark"
-                                styleClass="compact-action"/>
-                        <Button text="CLEAR ALL"
-                                onAction="#clearBookmarks"
-                                styleClass="danger-action"/>
-                    </children>
-                </HBox>
-            </children>
-            <padding>
-                <Insets top="12.0" right="12.0" bottom="12.0" left="12.0"/>
-            </padding>
-        </VBox>
-
-        <VBox fx:id="historyContent"
-              spacing="9.0"
-              visible="false"
-              managed="false"
-              styleClass="data-panel"
-              VBox.vgrow="ALWAYS">
-            <children>
-                <TextField fx:id="historySearch"
-                           promptText="Search browsing history"
-                           styleClass="panel-search"/>
-                <Label text="Double-click a visit to open it."
-                       styleClass="muted-copy"/>
-                <ListView fx:id="historyList"
-                          styleClass="data-list"
-                          VBox.vgrow="ALWAYS"/>
-                <Label fx:id="historyStatus"
-                       text="0 VISITS"
-                       styleClass="data-status"/>
-                <HBox spacing="6.0">
-                    <children>
-                        <Button text="DELETE SELECTED"
-                                onAction="#deleteSelectedVisit"
-                                styleClass="compact-action"/>
-                        <Button text="CLEAR ALL"
-                                onAction="#clearHistory"
-                                styleClass="danger-action"/>
-                    </children>
-                </HBox>
-            </children>
-            <padding>
-                <Insets top="12.0" right="12.0" bottom="12.0" left="12.0"/>
-            </padding>
-        </VBox>
-
-        <VBox fx:id="downloadsContent"
-              spacing="9.0"
-              visible="false"
-              managed="false"
-              styleClass="data-panel"
-              VBox.vgrow="ALWAYS">
-            <children>
-                <TextField fx:id="downloadSearch"
-                           promptText="Search download metadata"
-                           styleClass="panel-search"/>
-                <Label text="Download transfers arrive in Phase 4. Metadata created then will appear here."
-                       wrapText="true"
-                       styleClass="muted-copy"/>
-                <ListView fx:id="downloadList"
-                          styleClass="data-list"
-                          VBox.vgrow="ALWAYS"/>
-                <Label fx:id="downloadStatus"
-                       text="0 DOWNLOADS"
-                       styleClass="data-status"/>
-                <HBox spacing="6.0">
-                    <children>
-                        <Button text="DELETE SELECTED"
-                                onAction="#deleteSelectedDownload"
-                                styleClass="compact-action"/>
-                        <Button text="CLEAR ALL"
-                                onAction="#clearDownloads"
-                                styleClass="danger-action"/>
-                    </children>
-                </HBox>
-            </children>
-            <padding>
-                <Insets top="12.0" right="12.0" bottom="12.0" left="12.0"/>
-            </padding>
-        </VBox>
-
-        <VBox fx:id="settingsContent"
-              spacing="12.0"
-              visible="false"
-              managed="false"
-              styleClass="panel-content"
-              VBox.vgrow="ALWAYS">
-            <children>
-                <TextField fx:id="settingsSearch"
-                           promptText="Search settings"
-                           styleClass="panel-search"/>
-                <VBox fx:id="appearanceSettings"
-                      spacing="7.0"
-                      styleClass="settings-card">
-                    <children>
-                        <Label text="APPEARANCE" styleClass="section-label"/>
-                        <Label text="Accent, wallpaper, interface scale, sidebar, dock mode, and reduced motion are persisted automatically. Change them from Easy Setup."
-                               wrapText="true"
-                               styleClass="muted-copy"/>
-                    </children>
-                </VBox>
-                <VBox fx:id="privacySettings"
-                      spacing="7.0"
-                      styleClass="settings-card">
-                    <children>
-                        <Label text="BROWSING DATA" styleClass="section-label"/>
-                        <Label text="History and download metadata can be searched and removed from their sidebar pages."
-                               wrapText="true"
-                               styleClass="muted-copy"/>
-                        <Button text="CLEAR HISTORY"
-                                onAction="#clearHistory"
-                                styleClass="danger-action"/>
-                        <Button text="CLEAR DOWNLOAD METADATA"
-                                onAction="#clearDownloads"
-                                styleClass="danger-action"/>
-                    </children>
-                </VBox>
-                <Label fx:id="databaseStatus"
-                       text="CONNECTED · POSTGRESQL"
-                       styleClass="database-status"/>
-            </children>
-            <padding>
-                <Insets top="12.0" right="12.0" bottom="12.0" left="12.0"/>
-            </padding>
-        </VBox>
+        <StackPane fx:id="panelContentHost" VBox.vgrow="ALWAYS"/>
     </children>
 </VBox>

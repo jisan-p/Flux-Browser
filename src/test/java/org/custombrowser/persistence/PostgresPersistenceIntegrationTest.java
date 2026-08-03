@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
@@ -74,6 +75,35 @@ class PostgresPersistenceIntegrationTest {
 
             persistence.recordVisit("Example", "https://example.com");
             assertEquals(1, persistence.visits("example").join().size());
+
+            var download = persistence.createDownload(
+                            "https://example.com/flux.zip",
+                            "flux.zip",
+                            "/tmp/flux.zip")
+                    .join();
+            persistence.updateDownload(
+                            download.id(),
+                            "COMPLETED",
+                            128,
+                            128L,
+                            Instant.now(),
+                            null)
+                    .join();
+            var storedDownload = persistence.downloads("flux").join().getFirst();
+            assertEquals("COMPLETED", storedDownload.status());
+            assertEquals(128, storedDownload.bytesDownloaded());
+            assertEquals(
+                    0,
+                    persistence.countCompletedDownloadsBefore(
+                            Instant.now().minus(Duration.ofDays(30))).join());
+            assertEquals(
+                    0,
+                    persistence.countVisitsBefore(
+                            Instant.now().minus(Duration.ofDays(30))).join());
+            assertEquals(
+                    0,
+                    persistence.countOldSessionRecordsBefore(
+                            Instant.now().minus(Duration.ofDays(30))).join());
 
             persistence.saveSessionNow(new BrowserSession(
                     List.of(new StoredTab(

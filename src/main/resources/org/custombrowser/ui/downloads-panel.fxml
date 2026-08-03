@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox fx:id="panelRoot" spacing="9.0" styleClass="data-panel"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <TextField fx:id="downloadSearch" promptText="Search download metadata"
+                   styleClass="panel-search"/>
+        <Label text="ACTIVE TRANSFERS" styleClass="section-label"/>
+        <ListView fx:id="activeDownloadList" prefHeight="118.0"
+                  styleClass="data-list"/>
+        <HBox spacing="5.0">
+            <children>
+                <Button text="CANCEL" onAction="#cancelActiveDownload"
+                        styleClass="danger-action"/>
+                <Button text="RETRY" onAction="#retryActiveDownload"
+                        styleClass="compact-action"/>
+                <Button text="OPEN" onAction="#openActiveDownload"
+                        styleClass="compact-action"/>
+                <Button text="REVEAL" onAction="#revealActiveDownload"
+                        styleClass="compact-action"/>
+            </children>
+        </HBox>
+        <Label text="SAVED METADATA" styleClass="section-label"/>
+        <ListView fx:id="downloadList" styleClass="data-list"
+                  VBox.vgrow="ALWAYS"/>
+        <Label fx:id="downloadStatus" text="0 DOWNLOADS"
+               styleClass="data-status"/>
+        <HBox spacing="6.0">
+            <children>
+                <Button text="DELETE SELECTED" onAction="#deleteSelectedDownload"
+                        styleClass="compact-action"/>
+                <Button text="CLEAR ALL" onAction="#clearDownloads"
+                        styleClass="danger-action"/>
+            </children>
+        </HBox>
+    </children>
+    <padding><Insets top="12" right="12" bottom="12" left="12"/></padding>
+</VBox>
