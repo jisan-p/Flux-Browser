@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flux Phase 2 Test</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+        background: #111218;
+        color: #f4f4f7;
+      }
+
+      body {
+        max-width: 48rem;
+        margin: 4rem auto;
+        padding: 0 2rem;
+      }
+
+      a,
+      button {
+        color: #ff6b91;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Flux Phase 2 browser test</h1>
+    <p>
+      Find target: nebula. This local page exercises title synchronization,
+      find-in-page, popup routing, and external protocols.
+    </p>
+    <p>
+      A second nebula occurrence makes next-match behavior visible.
+    </p>
+    <p>
+      <button type="button"
+              onclick="window.open('https://example.com', '_blank')">
+        Open popup tab
+      </button>
+    </p>
+    <p>
+      <a href="mailto:test@example.com?subject=Flux%20Phase%202">
+        Open mail application
+      </a>
+    </p>
+    <p>
+      <a href="phase4-download.zip">Download Phase 4 fixture</a>
+    </p>
+    <p>
+      <button type="button"
+              onclick="document.cookie='flux_phase4=present; path=/'; document.querySelector('#cookie-value').textContent=document.cookie">
+        Set test cookie
+      </button>
+      <button type="button"
+              onclick="document.querySelector('#cookie-value').textContent=document.cookie || '(empty)'">
+        Show cookies
+      </button>
+    </p>
+    <p id="cookie-value">Cookie value appears here.</p>
+    <p>
+      <label for="suspension-state">Unsaved suspension test value:</label>
+      <input id="suspension-state"
+             type="text"
+             placeholder="Type UNSAVED-FLUX-STATE">
+    </p>
+  </body>
+</html>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox fx:id="panelRoot" spacing="12.0" styleClass="panel-content"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <TextField fx:id="settingsSearch" promptText="Search settings"
+                   styleClass="panel-search"/>
+        <VBox fx:id="appearanceSettings" spacing="7.0"
+              styleClass="settings-card">
+            <children>
+                <Label text="APPEARANCE" styleClass="section-label"/>
+                <Label text="Accent, wallpaper, interface scale, sidebar, dock mode, and reduced motion are persisted automatically. Change them from Easy Setup."
+                       wrapText="true" styleClass="muted-copy"/>
+            </children>
+        </VBox>
+        <VBox fx:id="privacySettings" spacing="7.0"
+              styleClass="settings-card">
+            <children>
+                <Label text="BROWSING DATA" styleClass="section-label"/>
+                <Label text="History and download metadata can be searched and removed from their sidebar pages."
+                       wrapText="true" styleClass="muted-copy"/>
+                <Button text="CLEAR HISTORY" onAction="#clearHistory"
+                        styleClass="danger-action"/>
+                <Button text="CLEAR DOWNLOAD METADATA" onAction="#clearDownloads"
+                        styleClass="danger-action"/>
+                <Button text="CLEAR COOKIES" onAction="#clearCookies"
+                        styleClass="danger-action"/>
+                <Button text="CLEAR FAVICON CACHE" onAction="#clearFavicons"
+                        styleClass="compact-action"/>
+                <Button text="CLEAR SAVED SESSION" onAction="#clearSessionData"
+                        styleClass="danger-action"/>
+                <Button text="RESET POPUP PERMISSIONS" onAction="#resetPopupPermissions"
+                        styleClass="compact-action"/>
+                <Label fx:id="browsingDataStatus" text="SELECT A DATA ACTION"
+                       styleClass="data-status"/>
+                <Label fx:id="cacheLimitation"
+                       text="JavaFX WebView cache clearing is unavailable."
+                       wrapText="true" styleClass="warning-copy"/>
+            </children>
+        </VBox>
+        <Label fx:id="databaseStatus" text="CONNECTED · POSTGRESQL"
+               styleClass="database-status"/>
+    </children>
+    <padding><Insets top="12" right="12" bottom="12" left="12"/></padding>
+</VBox>
