@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<ScrollPane fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.SettingsController"
+            visible="false" managed="false" fitToWidth="true" styleClass="settings-scroll" stylesheets="@../style.css">
+    <content>
+        <VBox spacing="26" styleClass="settings-page">
+            <HBox alignment="CENTER_LEFT">
+                <Label text="FLUX / SETTINGS" styleClass="eyebrow"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="Back to browsing  ×" onAction="#dismiss" styleClass="text-button"/>
+            </HBox>
+            <VBox spacing="10">
+                <Label text="Make yourself at home." styleClass="page-title"/>
+                <Label text="A few small details. A space that feels like you." styleClass="hero-subtitle" wrapText="true"/>
+            </VBox>
+            <VBox spacing="18" styleClass="settings-card" maxWidth="850">
+                <Label text="APPEARANCE" styleClass="section-heading"/>
+                <HBox alignment="CENTER_LEFT" spacing="20">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Accent color" styleClass="setting-title"/>
+                        <Label text="Tabs, highlights, and your home screen. For this session." styleClass="muted" wrapText="true"/>
+                    </VBox>
+                    <Button fx:id="magentaButton" text="●  Magenta" onAction="#magenta" styleClass="accent-choice,magenta-choice"/>
+                    <Button fx:id="cyanButton" text="●  Cyan" onAction="#cyan" styleClass="accent-choice,cyan-choice"/>
+                </HBox>
+                <Separator/>
+                <HBox alignment="CENTER_LEFT" spacing="20">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Page zoom" styleClass="setting-title"/>
+                        <Label text="Adjust the website in your current tab." styleClass="muted"/>
+                    </VBox>
+                    <Slider fx:id="zoomSlider" min="75" max="150" value="100" blockIncrement="5" prefWidth="180" accessibleText="Current page zoom"/>
+                    <Label fx:id="zoomLabel" text="100%" minWidth="44"/>
+                    <Button text="Reset" onAction="#resetZoom" styleClass="text-button"/>
+                </HBox>
+            </VBox>
+            <VBox spacing="14" styleClass="settings-card" maxWidth="850">
+                <HBox alignment="CENTER_LEFT">
+                    <Label text="SAVED BROWSING DATA" styleClass="section-heading"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="connectionLabel" text="Connecting…" styleClass="connection-label"/>
+                </HBox>
+                <Label text="Your bookmarks, history, and Speed Dial are stored in your PostgreSQL database." wrapText="true"/>
+                <Label fx:id="connectionDetail" text="Checking your connection…" styleClass="muted" wrapText="true"/>
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <Button fx:id="reconnectButton" text="Reconnect storage" onAction="#reconnect" styleClass="secondary-button"/>
+                    <Label text="Connection settings: config/database.properties or FLUX_DB_* environment variables." styleClass="muted" wrapText="true" HBox.hgrow="ALWAYS"/>
+                </HBox>
+            </VBox>
+            <HBox alignment="CENTER_LEFT" spacing="14">
+                <Label text="FLUX 1.0" styleClass="eyebrow"/>
+                <Label text="JavaFX WebKit · Made for a lighter browsing experience." styleClass="muted" wrapText="true"/>
+            </HBox>
+        </VBox>
+    </content>
+</ScrollPane>

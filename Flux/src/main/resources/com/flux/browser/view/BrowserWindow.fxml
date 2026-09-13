@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.SVGPath?>
+<BorderPane fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.flux.browser.controller.BrowserController" styleClass="browser-root" stylesheets="@../style.css">
+    <left><fx:include fx:id="sidebar" source="Sidebar.fxml"/></left>
+    <center>
+        <BorderPane>
+            <top>
+                <VBox>
+                    <HBox styleClass="tab-strip" alignment="CENTER_LEFT" spacing="6">
+                        <ScrollPane fx:id="tabScroll" fitToHeight="true" hbarPolicy="NEVER" vbarPolicy="NEVER" pannable="true" HBox.hgrow="ALWAYS" minWidth="100" styleClass="tab-scroll">
+                            <content><HBox fx:id="tabHeaders" alignment="CENTER_LEFT" spacing="6"/></content>
+                        </ScrollPane>
+                        <Button fx:id="newTabButton" text="+" styleClass="icon-button,new-tab-button" onAction="#newTab" accessibleText="New tab">
+                            <tooltip><Tooltip text="New tab · Ctrl/Cmd+T"/></tooltip>
+                        </Button>
+                        <Region fx:id="titleDrag" minWidth="35" prefWidth="100" onMousePressed="#beginDrag" onMouseDragged="#dragWindow" onMouseClicked="#titleClicked"/>
+                        <Button text="−" onAction="#minimize" styleClass="window-button" accessibleText="Minimize window"/>
+                        <Button fx:id="maximizeButton" text="□" onAction="#maximize" styleClass="window-button" accessibleText="Maximize or restore window"/>
+                        <Button text="×" onAction="#quit" styleClass="window-button,window-close" accessibleText="Close window"/>
+                    </HBox>
+                    <HBox styleClass="navigation-strip" alignment="CENTER_LEFT" spacing="6">
+                        <Button fx:id="backButton" onAction="#back" styleClass="icon-button" accessibleText="Back">
+                            <graphic><SVGPath content="M 11 2 L 4 9 L 11 16" styleClass="line-icon"/></graphic>
+                            <tooltip><Tooltip text="Back · Alt+Left"/></tooltip>
+                        </Button>
+                        <Button fx:id="forwardButton" onAction="#forward" styleClass="icon-button" accessibleText="Forward">
+                            <graphic><SVGPath content="M 4 2 L 11 9 L 4 16" styleClass="line-icon"/></graphic>
+                            <tooltip><Tooltip text="Forward · Alt+Right"/></tooltip>
+                        </Button>
+                        <Button fx:id="reloadButton" onAction="#reload" styleClass="icon-button" accessibleText="Reload page">
+                            <graphic><SVGPath content="M 15 6 A 7 7 0 1 0 16 12 M 15 1 L 15 6 L 10 6" styleClass="line-icon"/></graphic>
+                            <tooltip><Tooltip text="Reload · Ctrl/Cmd+R"/></tooltip>
+                        </Button>
+                        <Button fx:id="stopButton" onAction="#stopLoading" styleClass="icon-button" accessibleText="Stop loading">
+                            <graphic><SVGPath content="M 3 3 L 13 13 M 13 3 L 3 13" styleClass="line-icon"/></graphic>
+                            <tooltip><Tooltip text="Stop · Escape"/></tooltip>
+                        </Button>
+                        <Button fx:id="homeButton" onAction="#home" styleClass="icon-button" accessibleText="Speed Dial home">
+                            <graphic><SVGPath content="M 1 8 L 9 1 L 17 8 M 4 6 L 4 16 L 14 16 L 14 6 M 7 16 L 7 11 L 11 11 L 11 16" styleClass="line-icon"/></graphic>
+                            <tooltip><Tooltip text="Home · Alt+Home"/></tooltip>
+                        </Button>
+                        <HBox styleClass="address-box" alignment="CENTER_LEFT" spacing="10" HBox.hgrow="ALWAYS">
+                            <Label fx:id="schemeLabel" text="FLUX" styleClass="scheme-label" minWidth="38"/>
+                            <TextField fx:id="addressBar" promptText="Search the web or enter an address" onAction="#navigate" HBox.hgrow="ALWAYS" styleClass="address-input" accessibleText="Web address or search query"/>
+                            <Button fx:id="bookmarkButton" text="☆" onAction="#toggleBookmark" styleClass="bookmark-button" accessibleText="Bookmark this page">
+                                <tooltip><Tooltip text="Toggle bookmark · Ctrl/Cmd+D"/></tooltip>
+                            </Button>
+                        </HBox>
+                        <Button text="•••" onAction="#settings" styleClass="icon-button" accessibleText="Open settings"/>
+                    </HBox>
+                    <ProgressBar fx:id="loadProgress" progress="0" maxWidth="Infinity" prefHeight="2" minHeight="2" maxHeight="2" styleClass="page-progress"/>
+                </VBox>
+            </top>
+            <center>
+                <StackPane fx:id="contentHost">
+                    <StackPane fx:id="tabHost"/>
+                    <fx:include fx:id="library" source="Library.fxml"/>
+                    <fx:include fx:id="settings" source="Settings.fxml"/>
+                </StackPane>
+            </center>
+            <bottom>
+                <HBox styleClass="status-bar" alignment="CENTER_LEFT" spacing="12">
+                    <Label fx:id="databaseStatus" text="●  CONNECTING STORAGE" styleClass="storage-label"/>
+                    <Label fx:id="statusText" text="Ready to explore" HBox.hgrow="ALWAYS" maxWidth="Infinity" minWidth="0"/>
+                    <Label fx:id="tabCount" text="1 TAB" styleClass="status-meta"/>
+                    <Label text="◢" styleClass="resize-grip" onMousePressed="#beginResize" onMouseDragged="#resizeWindow" accessibleText="Drag to resize window"/>
+                </HBox>
+            </bottom>
+        </BorderPane>
+    </center>
+</BorderPane>

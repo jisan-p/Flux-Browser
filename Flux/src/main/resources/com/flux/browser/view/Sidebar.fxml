@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.SVGPath?>
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.SidebarController"
+      alignment="TOP_CENTER" spacing="16" prefWidth="68" minWidth="68" maxWidth="68" styleClass="sidebar" stylesheets="@../style.css">
+    <Button onAction="#home" styleClass="brand-button" accessibleText="Flux home">
+        <graphic><SVGPath content="M 4 0 L 25 0 L 20 7 L 10 7 L 8 13 L 19 13 L 14 20 L 6 20 L 3 29 L -4 29 Z" styleClass="brand-mark"/></graphic>
+        <tooltip><Tooltip text="Flux · Your next destination"/></tooltip>
+    </Button>
+    <Separator/>
+    <Button fx:id="homeButton" onAction="#home" styleClass="sidebar-button,selected" accessibleText="Speed Dial">
+        <graphic><SVGPath content="M 0 0 L 7 0 L 7 7 L 0 7 Z M 12 0 L 19 0 L 19 7 L 12 7 Z M 0 12 L 7 12 L 7 19 L 0 19 Z M 12 12 L 19 12 L 19 19 L 12 19 Z" styleClass="line-icon"/></graphic>
+        <tooltip><Tooltip text="Speed Dial"/></tooltip>
+    </Button>
+    <Button fx:id="bookmarksButton" onAction="#bookmarks" styleClass="sidebar-button" accessibleText="Bookmarks">
+        <graphic><SVGPath content="M 3 1 L 17 1 L 17 20 L 10 15 L 3 20 Z" styleClass="line-icon"/></graphic>
+        <tooltip><Tooltip text="Bookmarks · Ctrl/Cmd+Shift+B"/></tooltip>
+    </Button>
+    <Button fx:id="historyButton" onAction="#history" styleClass="sidebar-button" accessibleText="History">
+        <graphic><SVGPath content="M 3 4 A 9 9 0 1 1 1 13 M 0 0 L 0 6 L 6 6 M 10 5 L 10 11 L 14 13" styleClass="line-icon"/></graphic>
+        <tooltip><Tooltip text="History · Ctrl/Cmd+Y"/></tooltip>
+    </Button>
+    <Region VBox.vgrow="ALWAYS"/>
+    <Label text="GX" styleClass="sidebar-caption"/>
+    <Button fx:id="settingsButton" onAction="#settings" styleClass="sidebar-button" accessibleText="Settings">
+        <graphic><SVGPath content="M 0 4 L 20 4 M 0 10 L 20 10 M 0 16 L 20 16 M 5 1 L 5 7 M 14 7 L 14 13 M 7 13 L 7 19" styleClass="line-icon"/></graphic>
+        <tooltip><Tooltip text="Settings"/></tooltip>
+    </Button>
+</VBox>
