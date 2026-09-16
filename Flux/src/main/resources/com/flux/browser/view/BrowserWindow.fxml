@@ -49,7 +49,11 @@
                                 <tooltip><Tooltip text="Toggle bookmark · Ctrl/Cmd+D"/></tooltip>
                             </Button>
                         </HBox>
+                        <Button fx:id="featuresButton" text="Tools" onAction="#features" styleClass="icon-button" accessibleText="Browser tools"/>
                         <Button text="•••" onAction="#settings" styleClass="icon-button" accessibleText="Open settings"/>
+                    </HBox>
+                    <HBox fx:id="documentBar" visible="false" managed="false" spacing="10" style="-fx-padding:8;" alignment="CENTER_LEFT">
+                        <Label text="PDF viewer"/><Button text="Previous page" onAction="#pdfPrevious"/><Button text="Next page" onAction="#pdfNext"/><Button text="−" onAction="#pdfZoomOut"/><Button text="+" onAction="#pdfZoomIn"/>
                     </HBox>
                     <ProgressBar fx:id="loadProgress" progress="0" maxWidth="Infinity" prefHeight="2" minHeight="2" maxHeight="2" styleClass="page-progress"/>
                 </VBox>
@@ -59,6 +63,7 @@
                     <StackPane fx:id="tabHost"/>
                     <fx:include fx:id="library" source="Library.fxml"/>
                     <fx:include fx:id="settings" source="Settings.fxml"/>
+                    <fx:include fx:id="features" source="Features.fxml"/>
                 </StackPane>
             </center>
             <bottom>

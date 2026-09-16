@@ -36,6 +36,7 @@ public final class WebTabController {
     private double zoom = 1;
     private String status = "Ready to explore";
     private String attemptedUrl = "";
+    private String deferredUrl;
 
     private void initializePage(BrowserPage content) {
         page = content;
@@ -57,6 +58,7 @@ public final class WebTabController {
         page.popup = browser::newPopupTab;
         page.closeRequested = () -> browser.closeTab(this);
         page.shortcut = browser::nativeShortcut;
+        if (page instanceof NativeWebPage n) { n.pdf.addListener(o -> changed()); n.openUrl = browser::openNewUrl; }
         updatePageVisibility();
     }
 
@@ -85,6 +87,7 @@ public final class WebTabController {
             resolveTitle();
             lastSuccessfulUrl = location.get();
             status = "Page loaded";
+            browser.pageLoaded(this);
             if (history != null && UrlResolver.isWeb(location.get())) {
                 try {
                     browser.perform("", history.saveVisit(title.get(), location.get()), ignored -> {});
@@ -113,6 +116,7 @@ public final class WebTabController {
     public void load(String address) {
         if (disposed) return;
         if (UrlResolver.HOME.equals(address)) { home(); return; }
+        deferredUrl = null;
         attemptedUrl = address;
         atHome = false;
         updateHomeActivity();
@@ -127,7 +131,7 @@ public final class WebTabController {
     @FXML public void home() {
         if (disposed) return;
         if (!atHome) homeReturnError = errorPane.isVisible();
-        atHome = true;
+        atHome = true; deferredUrl = null;
         if (page != null) page.stop();
         // Retain history but pause media when explicitly returning Home.
         if (page != null) page.evaluate("document.querySelectorAll('video,audio').forEach(m=>m.pause()); true");
@@ -152,7 +156,7 @@ public final class WebTabController {
     }
 
     public void forward() { if (canGoForward()) page.forward(); }
-    public void reload() { if (atHome) speedDialController.refresh(); else if (errorPane.isVisible()) retry(); else page.reload(); }
+    public void reload() { if (atHome) speedDialController.refresh(); else if (errorPane.isVisible()) retry(); else if (page != null) page.reload(); }
     public void stop() { if (page != null) page.stop(); }
     @FXML private void retry() { if (!attemptedUrl.isBlank()) load(attemptedUrl); }
 
@@ -168,6 +172,23 @@ public final class WebTabController {
         if (page == null) initializePage(NativeWebPage.enabled() ? new NativeWebPage(browser.window()) : new JavaFxPage(browser.window()));
         return page;
     }
+    public BrowserPage existingPage() { return page; }
+    public void restoreDeferred(String url, String name, double value) {
+        zoom(value); deferredUrl = UrlResolver.HOME.equals(url) ? null : url;
+        atHome = deferredUrl == null; location.set(url); title.set(name == null ? "Restored tab" : name); changed();
+    }
+    public void restore(String url, String name, double value) { restoreDeferred(url,name,value); if (active && deferredUrl != null) activateDeferred(); }
+    private void activateDeferred() {
+        String url = deferredUrl; deferredUrl = null;
+        if (url.startsWith("file:")) openPdf(java.nio.file.Path.of(java.net.URI.create(url))); else load(url);
+    }
+    public void openPdf(java.nio.file.Path path) {
+        attemptedUrl = path.toAbsolutePath().toUri().toString(); location.set(attemptedUrl);
+        atHome = false; deferredUrl = null; updateHomeActivity(); visible(speedDial,false); visible(errorPane,false);
+        BrowserPage p = page(); updatePageVisibility();
+        if (p instanceof NativeWebPage n) n.action("pdfOpen",path.toAbsolutePath().toString());
+        changed();
+    }
     public ReadOnlyStringProperty titleProperty() { return title.getReadOnlyProperty(); }
     public ReadOnlyStringProperty locationProperty() { return location.getReadOnlyProperty(); }
     public ReadOnlyBooleanProperty loadingProperty() { return loading.getReadOnlyProperty(); }
@@ -176,7 +197,7 @@ public final class WebTabController {
     public double zoom() { return zoom; }
     public void zoom(double value) { zoom = Math.clamp(value, 0.75, 1.5); if (page != null) page.zoom(zoom); }
     public void focus() { if (!atHome && page != null) page.focus(); }
-    public void setActive(boolean active) { this.active = active; updateHomeActivity(); updatePageVisibility(); }
+    public void setActive(boolean active) { this.active = active; if (active && deferredUrl != null) activateDeferred(); updateHomeActivity(); updatePageVisibility(); }
     private void updateHomeActivity() { speedDialController.setActive(active && atHome && !disposed); }
     private void updatePageVisibility() { if (page != null) page.visible(active && !atHome && !errorPane.isVisible() && !disposed); }
     public void refreshDials() { speedDialController.refresh(); }

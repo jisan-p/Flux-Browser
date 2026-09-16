@@ -5,7 +5,8 @@ import java.util.Objects;
 
 /** Framework-free checks run automatically by `mvn test` and `mvn verify`. */
 public final class BrowserChecks {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        FeatureChecks.run();
         equal(UrlResolver.resolve("  "), UrlResolver.HOME);
         equal(UrlResolver.resolve("about:blank"), UrlResolver.HOME);
         equal(UrlResolver.resolve(" example.com "), "https://example.com/");

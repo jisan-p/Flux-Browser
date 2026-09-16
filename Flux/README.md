@@ -8,7 +8,7 @@ A Java 21+ desktop browser with an Opera GX-inspired carbon/magenta/cyan interfa
 
 The supplied Min browser was analyzed before implementation. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the source-grounded feature matrix, component diagram, package tree, and threading decisions.
 
-Flux includes URL/search resolution, independent tabs, Back/Forward/Reload/Home/Stop, real loading progress, page titles, popup tabs, bookmark toggling and editing, chronological history, editable Speed Dial, accent selection, zoom, and custom window controls. The Min checkout is a reference, not a runtime dependency.
+Flux includes URL/search resolution, independent tabs, Back/Forward/Reload/Home/Stop, real loading progress, page titles, popup tabs, bookmark toggling and editing, chronological history, editable Speed Dial, accent selection, zoom, and custom window controls. It also includes **session restore, workspaces, focus mode, ad/tracker domain blocking, system phishing warnings and HTTPS upgrades, macOS Keychain and optional CLI password providers, full-text history search, arithmetic answers, search templates, reader mode, translation in a new tab, downloads, and a PDFKit viewer**. Open **Tools** beside the address bar. See the [feature guide](docs/FEATURES.md) for defaults, setup, and limits. The Min checkout is a reference, not a runtime dependency; the bundled Readability library is attributed separately.
 
 ## 2. Maven dependencies
 
@@ -19,6 +19,7 @@ The complete [pom.xml](pom.xml) targets Java 21 and configures:
 | `javafx-controls` | 21.0.12 | Controls, layouts, CSS, and input |
 | `javafx-fxml` | 21.0.12 | FXML loading and controller injection |
 | `javafx-web` | 21.0.12 | Compatibility engine on non-macOS or `-Dflux.engine=javafx` |
+| `gson` | 2.13.2 | Local session settings, declarative search providers, and native service messages |
 | `postgresql` | 42.7.13 | JDBC storage |
 | `javafx-maven-plugin` | 0.0.8 | `mvn javafx:run`, including native JavaFX dependencies |
 
@@ -29,6 +30,8 @@ On JDK 24 and later, the automatically activated `modern-jdk` Maven profile sele
 On macOS, Flux now uses **WKWebView**, the system WebKit engine, inside the JavaFX window. This replaces JavaFX WebView for everyday browsing on your M3. WebKit manages its web-content/network/GPU processes; page JavaScript and video no longer render through JavaFX's WebView pipeline. Native calls enqueue asynchronously in AppKit and JavaFX; neither path waits for page-script execution. The bridge builds automatically using **Xcode Command Line Tools** (`xcode-select --install` if missing), supports macOS 12+, and packages the library for the running JDK's architecture. Use `mvn javafx:run` as before. To open a page at launch: `mvn javafx:run -Djavafx.args="--url=https://github.com/"`. System WebKit updates come with macOS.
 
 JavaFX uses Metal for the **shell** on macOS with JDK 24+, with ES2/software fallbacks. On older JDKs the shell uses software rendering. This setting does not control WKWebView's compositor. The earlier software-default choice came from a synthetic JavaFX WebView test; subsequent media/site tests exposed its limits and prompted the native-engine replacement. To compare the old engine explicitly: `mvn -Dflux.engine=javafx javafx:run`. See [VERIFICATION.md](docs/VERIFICATION.md) for measurements and limitations.
+
+Shell diagnostics are opt-in: `mvn -Dflux.showFps=true javafx:run` displays JavaFX rendering statistics. `-Dflux.fullspeed=true` enables an uncapped diagnostic run; normal launches leave it **false** because it disables JavaFX VSync and does not accelerate WKWebView video. The shell counter is not a webpage/video FPS measurement.
 
 The default maximum Java heap is **1 GiB (`1024m`)**, leaving room on an 8 GB Mac for macOS, PostgreSQL, and other applications. This is a Java heap limit, **not a cap on total browser memory**: WebKit documents, native media, and graphics buffers also consume memory. Override it when needed with `mvn -Dflux.maxHeap=1536m javafx:run`. Use an Apple Silicon JDK on the M3 so Maven selects arm64 JavaFX libraries.
 
@@ -75,7 +78,7 @@ Flux initializes its tables on a background thread at startup. To inspect or app
 psql -h localhost -U flux -d flux --single-transaction -v ON_ERROR_STOP=1 -f database/schema.sql
 ```
 
-[schema.sql](database/schema.sql) creates `history`, `bookmarks`, and `speed_dial`, with identity IDs, timestamp indexes, timezone-aware dates, unique saved URLs, bookmark folders, and initial Speed Dial sites. The brief's `quick_dial` and `speed_dial` names represent the same feature; this implementation uses **`speed_dial`**. Seeds are inserted only when creating the table, so deleting a starter tile is permanent.
+[schema.sql](database/schema.sql) creates `history`, `bookmarks`, `speed_dial`, and the optional `page_text` search index, with identity IDs, timestamp indexes, timezone-aware dates, unique saved URLs, bookmark folders, and initial Speed Dial sites. The brief's `quick_dial` and `speed_dial` names represent the same feature; this implementation uses **`speed_dial`**. Seeds are inserted only when creating the table, so deleting a starter tile is permanent.
 
 [DatabaseManager.java](src/main/java/com/flux/browser/db/DatabaseManager.java) owns the connection factory, schema transaction, timeouts, **two JDBC readers and one ordered writer**. The reader and writer executors each have a 64-task queue; idle threads retire after 30 seconds. Queue saturation fails the operation through its future instead of running SQL on JavaFX or growing memory without a bound. [HistoryDAO.java](src/main/java/com/flux/browser/db/HistoryDAO.java), [BookmarkDAO.java](src/main/java/com/flux/browser/db/BookmarkDAO.java), and [SpeedDialDAO.java](src/main/java/com/flux/browser/db/SpeedDialDAO.java) expose asynchronous prepared-statement operations. Connections, statements, and result iteration stay off the JavaFX thread; controllers apply results with `Platform.runLater`.
 
@@ -89,7 +92,7 @@ If PostgreSQL is unavailable, Flux still opens and browses. The footer reports *
 
 The complete UI lives in [src/main/resources/com/flux/browser/view](src/main/resources/com/flux/browser/view), with the shared [style.css](src/main/resources/com/flux/browser/style.css). The UI uses the specified carbon palette with magenta/cyan accents, SVGPath artwork, a thin sidebar, custom tab chips, and native FXML home/library/settings screens.
 
-The extensive [Scene Builder guide](docs/UI_SCENEBUILDER_GUIDE.md) documents all 13 FXML/controller pairs, injected fields, action handlers, runtime bindings, and safe live-demo edits. Dynamic rows and tiles also have standalone FXML templates.
+The extensive [Scene Builder guide](docs/UI_SCENEBUILDER_GUIDE.md) documents all 15 FXML/controller pairs, injected fields, action handlers, runtime bindings, and safe live-demo edits. Dynamic rows and tiles also have standalone FXML templates.
 
 ## 5. Controller and engine wiring
 
@@ -111,7 +114,7 @@ The Java heap limit is separate from WebKit helper-process memory. WebKit decide
 | Toggle bookmark | Ctrl/Cmd+D |
 | History / bookmarks | Ctrl/Cmd+Y / Ctrl/Cmd+Shift+B |
 
-Drag the empty title-strip area to move the window; double-click it to maximize/restore. The bottom-right grip resizes the window. Accent selection lasts for the session; zoom belongs to the current tab. Browser sessions/tabs are not restored across app restarts.
+Drag the empty title-strip area to move the window; double-click it to maximize/restore. The bottom-right grip resizes the window. Accent selection lasts for the session; zoom belongs to the current tab. Tabs, their zoom levels, and workspaces restore across app restarts when enabled in Tools; only the selected tab loads immediately.
 
 ## 6. Build, verification, and presentation
 
@@ -147,7 +150,7 @@ For the five-minute demo, follow [PRESENTATION.md](docs/PRESENTATION.md). Record
 
 ### Practical limits
 
-Native WKWebView supports substantially more web/media APIs than JavaFX WebView, but site login policies, DRM, network conditions, and codec availability can still affect compatibility. There is no download manager, extension engine, password vault, ad blocker, synchronization, or private-browsing mode. HTTP error pages can count as completed navigation. The native bridge uses two JavaFX internal exports to obtain the owning macOS window handle; Maven configures them, and JavaFX upgrades require the UI checks.
+Native WKWebView supports substantially more web/media APIs than JavaFX WebView, but site login policies, DRM, network conditions, and codec availability can still affect compatibility. Downloads, domain blocking, password-provider integration, and PDF viewing are available through Tools on macOS. There is no general browser-extension runtime, synchronization, or private-browsing mode. Optional Bitwarden/1Password adapters require an installed, unlocked CLI; Flux does not install or sign in to these providers. HTTP error pages can count as completed navigation. The native bridge uses two JavaFX internal exports to obtain the owning macOS window handle; Maven configures them, and JavaFX upgrades require the UI checks.
 
 ### Troubleshooting
 

@@ -1,6 +1,11 @@
 package com.flux.browser.controller;
 
 import com.flux.browser.db.*;
+import com.flux.browser.feature.*;
+import com.flux.browser.web.NativeWebPage;
+import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.IdentityHashMap;
 import com.flux.browser.model.*;
 import com.flux.browser.util.Dialogs;
 import com.flux.browser.util.UrlResolver;
@@ -34,7 +39,10 @@ public final class BrowserController {
     @FXML private HBox tabHeaders;
     @FXML private StackPane tabHost;
     @FXML private ScrollPane tabScroll;
-    @FXML private Parent library, settings;
+    @FXML private Parent library, settings, features;
+    @FXML private FeaturesController featuresController;
+    @FXML private HBox documentBar;
+    @FXML private Button newTabButton;
     @FXML private SidebarController sidebarController;
     @FXML private LibraryController libraryController;
     @FXML private SettingsController settingsController;
@@ -43,6 +51,15 @@ public final class BrowserController {
     @FXML private Label schemeLabel, databaseStatus, statusText, tabCount;
     @FXML private ProgressBar loadProgress;
     private final List<Tab> tabs = new ArrayList<>();
+    private final IdentityHashMap<Tab, String> workspaces = new IdentityHashMap<>();
+    private final ArrayDeque<FeatureStore.SavedTab> recentlyClosed = new ArrayDeque<>();
+    private final FeatureStore store = new FeatureStore();
+    private final Downloads downloads = new Downloads();
+    private FeatureStore.State preferences = new FeatureStore.State();
+    private final PauseTransition sessionDelay = new PauseTransition(Duration.seconds(1));
+    private boolean sessionReady, restoring, focusMode;
+    private int interactionVersion, privacyVersion;
+    private final boolean sessionEnabled = Boolean.parseBoolean(System.getProperty("flux.session", "true"));
     private final PauseTransition toast = new PauseTransition(Duration.seconds(5));
     // Merge WebKit progress/title/status bursts into one shell update per display pulse.
     private final AnimationTimer chromeRefresh = new AnimationTimer() {
@@ -65,6 +82,9 @@ public final class BrowserController {
         sidebarController.configure(this);
         libraryController.configure(this, bookmarkDAO, historyDAO);
         settingsController.configure(this);
+        featuresController.configure(this);
+        sessionDelay.setOnFinished(e -> persistSession());
+        if (NativeWebPage.enabled()) NativeWebPage.downloadListener(downloads::update);
         toast.setOnFinished(event -> updateStatus());
         addressBar.focusedProperty().addListener((observable, before, focused) -> {
             addressBar.getParent().pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), focused);
@@ -76,12 +96,24 @@ public final class BrowserController {
         stage.iconifiedProperty().addListener((observable, before, after) -> updateActiveContent());
         createTab();
         reconnect();
+        int version = interactionVersion;
+        if (!sessionEnabled) { sessionReady = true; applyPrivacy(); }
+        else store.load().whenComplete((saved, error) -> Platform.runLater(() -> {
+            if (closed) return;
+            sessionReady = true;
+            if (error != null) { message("Session could not be read; starting with default preferences."); applyPrivacy(); return; }
+            preferences = saved;
+            applyPrivacy();
+            if (saved.restore && !saved.tabs.isEmpty() && version == interactionVersion) restoreSession();
+            else { preferences.workspace = "Default"; refreshWorkspaceHeaders(); }
+        }));
     }
 
     private Tab createTab() {
         var page = Views.<WebTabController>load("WebTab");
         var header = Views.<TabHeaderController>load("TabHeader");
         Tab tab = new Tab(page.controller(), page.root(), header.controller(), header.root());
+        workspaces.put(tab, preferences.workspace);
         page.controller().configure(this, historyDAO, speedDialDAO);
         header.controller().configure(page.controller(), () -> selectTab(tab), () -> closeTab(tab.page()));
         tabs.add(tab); tabHeaders.getChildren().add(tab.chip());
@@ -91,9 +123,14 @@ public final class BrowserController {
         return tab;
     }
 
-    @FXML public void newTab() { if (!closed) { createTab(); focusAddress(); } }
+    @FXML public void newTab() { if (!closed && canCreateTab()) { interactionVersion++; createTab(); focusAddress(); saveSession(); } }
+    private boolean canCreateTab() {
+        if (focusMode) { message("Turn off Focus mode in Browser tools to open or switch tabs."); return false; }
+        if (tabs.size() >= 200) { message("Close a tab before opening another (200 tab limit)."); return false; }
+        return true;
+    }
     public void newPopupTab(BrowserPage page) {
-        if (closed) { page.close(); return; }
+        if (closed || !canCreateTab()) { page.close(); return; }
         createTab().page().adopt(page);
     }
 
@@ -101,28 +138,32 @@ public final class BrowserController {
     public void nativeShortcut(String key) {
         if (closed) return;
         switch (key) {
+            case "reopen" -> reopenClosedTab();
             case "l" -> focusAddress(); case "t" -> newTab();
             case "w" -> { if (active != null) closeTab(active.page()); }
             case "r" -> reload(); case "d" -> toggleBookmark();
             case "y" -> showLibrary(false); case "bookmarks" -> showLibrary(true);
             case "home" -> home(); case "back" -> back(); case "forward" -> forward(); case "stop" -> stopLoading();
-            case "nextTab", "previousTab" -> selectTab(tabs.get(Math.floorMod(tabs.indexOf(active) + (key.equals("nextTab") ? 1 : -1), tabs.size())));
+            case "nextTab", "previousTab" -> selectTab(visibleTabs().get(Math.floorMod(visibleTabs().indexOf(active) + (key.equals("nextTab") ? 1 : -1), visibleTabs().size())));
             default -> {
                 if (key.matches("[1-9]")) {
-                    int index = key.equals("9") ? tabs.size()-1 : Integer.parseInt(key)-1;
-                    if (index < tabs.size()) selectTab(tabs.get(index));
+                    int index = key.equals("9") ? visibleTabs().size()-1 : Integer.parseInt(key)-1;
+                    if (index < visibleTabs().size()) selectTab(visibleTabs().get(index));
                 }
             }
         }
     }
 
     private void selectTab(Tab tab) {
-        if (closed || !tabs.contains(tab)) return;
+        if (closed || !tabs.contains(tab) || (focusMode && active != null && active != tab)) return;
+        preferences.workspace = workspaces.get(tab);
+        refreshWorkspaceHeaders();
         if (active != null && active != tab) {
             active.page().setActive(false);
             visible(active.content(), false);
         }
         active = tab;
+        saveSession();
         // Keep the scene association: detaching WebView on every switch recreates rendering state.
         // Hidden tabs are unmanaged, so only the selected page participates in layout and painting.
         visible(tab.content(), true);
@@ -148,20 +189,29 @@ public final class BrowserController {
         if (closed) return;
         Tab tab = tabs.stream().filter(item -> item.page() == page).findFirst().orElse(null);
         if (tab == null) return;
-        int index = tabs.indexOf(tab);
+        if (focusMode) { message("Turn off Focus mode before closing its tab."); return; }
+        recentlyClosed.addFirst(savedTab(tab));
+        while (recentlyClosed.size() > 20) recentlyClosed.removeLast();
+        int index = visibleTabs().indexOf(tab);
         boolean wasActive = active == tab;
         tab.header().dispose(); tab.page().dispose();
         tabs.remove(tab); tabHeaders.getChildren().remove(tab.chip()); tabHost.getChildren().remove(tab.content());
-        if (tabs.isEmpty()) { active = null; createTab(); focusAddress(); }
-        else if (wasActive) selectTab(tabs.get(Math.min(index, tabs.size() - 1)));
+        workspaces.remove(tab);
+        List<Tab> remaining = visibleTabs();
+        if (remaining.isEmpty()) { active = null; createTab(); focusAddress(); }
+        else if (wasActive) selectTab(remaining.get(Math.min(Math.max(0,index), remaining.size() - 1)));
         else refreshChrome();
+        saveSession();
     }
 
     @FXML private void navigate() { navigateTo(addressBar.getText()); }
     public void navigateTo(String input) {
         if (active == null || closed) return;
         try {
-            String address = UrlResolver.resolve(input);
+            interactionVersion++;
+            String answer = SearchTools.answer(input);
+            if (!answer.isEmpty()) { message(answer); return; }
+            String address = UrlResolver.resolve(SearchTools.resolve(input, preferences.providers));
             dismissPanels();
             addressBar.setText(address);
             active.page().load(address);
@@ -174,7 +224,7 @@ public final class BrowserController {
     @FXML private void reload() { if (library.isVisible()) libraryController.refresh(); else if (active != null) active.page().reload(); }
     @FXML private void stopLoading() { if (active != null) active.page().stop(); }
 
-    public void tabChanged(WebTabController page) { if (!closed && active != null && active.page() == page) chromeRefresh.start(); }
+    public void tabChanged(WebTabController page) { if (closed) return; saveSession(); if (active != null && active.page() == page) chromeRefresh.start(); }
     private void refreshChrome() {
         if (closed || active == null) return;
         WebTabController page = active.page();
@@ -186,7 +236,9 @@ public final class BrowserController {
         reloadButton.setDisable(page.loadingProperty().get());
         stopButton.setDisable(!page.loadingProperty().get());
         loadProgress.setProgress(page.progress());
-        tabCount.setText(tabs.size() + (tabs.size() == 1 ? " TAB" : " TABS"));
+        int count = visibleTabs().size();
+        tabCount.setText(count + (count == 1 ? " TAB" : " TABS") + (preferences.workspaces.size() > 1 ? " · " + preferences.workspace : ""));
+        visible(documentBar, !panelsVisible() && currentPage() instanceof NativeWebPage n && n.pdf.get());
         stage.setTitle(page.titleProperty().get() + " · Flux");
         if (!panelsVisible()) sidebarController.select(page.isHome() ? "home" : "");
         updateBookmark(false);
@@ -266,26 +318,26 @@ public final class BrowserController {
     private void refreshDials() { for (Tab tab : tabs) tab.page().refreshDials(); }
 
     public void showLibrary(boolean bookmarks) {
-        visible(settings, false); visible(library, true); tabHost.setVisible(false);
+        visible(features, false); visible(settings, false); visible(library, true); tabHost.setVisible(false);
         updateActiveContent();
         libraryController.show(bookmarks);
         sidebarController.select(bookmarks ? "bookmarks" : "history");
         refreshChrome();
     }
     @FXML public void settings() {
-        visible(library, false); visible(settings, true); tabHost.setVisible(false);
+        visible(features, false); visible(library, false); visible(settings, true); tabHost.setVisible(false);
         updateActiveContent();
         settingsController.show(active == null ? 1 : active.page().zoom());
         sidebarController.select("settings");
         refreshChrome();
     }
     public void dismissPanels() {
-        visible(library, false); visible(settings, false); tabHost.setVisible(true);
+        visible(features, false); visible(library, false); visible(settings, false); tabHost.setVisible(true);
         updateActiveContent();
         if (active != null) active.page().focus();
         refreshChrome();
     }
-    private boolean panelsVisible() { return library.isVisible() || settings.isVisible(); }
+    private boolean panelsVisible() { return library.isVisible() || settings.isVisible() || features.isVisible(); }
     private void updateActiveContent() { if (active != null) active.page().setActive(!panelsVisible() && !stage.isIconified()); }
     private static void visible(Node node, boolean visible) { node.setVisible(visible); node.setManaged(visible); }
     public void setAccent(boolean cyan) { root.getStyleClass().remove("cyan-theme"); if (cyan) root.getStyleClass().add("cyan-theme"); }
@@ -349,20 +401,20 @@ public final class BrowserController {
     private void keyPressed(KeyEvent event) {
         boolean handled = true;
         if (event.isControlDown() && event.getCode() == KeyCode.TAB) {
-            int next = Math.floorMod(tabs.indexOf(active) + (event.isShiftDown() ? -1 : 1), tabs.size());
-            selectTab(tabs.get(next));
+            int next = Math.floorMod(visibleTabs().indexOf(active) + (event.isShiftDown() ? -1 : 1), visibleTabs().size());
+            selectTab(visibleTabs().get(next));
         } else if (event.isShortcutDown()) {
             switch (event.getCode()) {
                 case L -> focusAddress();
-                case T -> newTab();
+                case T -> { if (event.isShiftDown()) reopenClosedTab(); else newTab(); }
                 case W -> { if (active != null) closeTab(active.page()); }
                 case R -> reload();
                 case D -> toggleBookmark();
                 case Y -> showLibrary(false);
                 case B -> { if (event.isShiftDown()) showLibrary(true); else handled = false; }
                 case DIGIT1, DIGIT2, DIGIT3, DIGIT4, DIGIT5, DIGIT6, DIGIT7, DIGIT8, DIGIT9 -> {
-                    int index = event.getCode() == KeyCode.DIGIT9 ? tabs.size() - 1 : event.getCode().getCode() - KeyCode.DIGIT1.getCode();
-                    if (index < tabs.size()) selectTab(tabs.get(index));
+                    int index = event.getCode() == KeyCode.DIGIT9 ? visibleTabs().size() - 1 : event.getCode().getCode() - KeyCode.DIGIT1.getCode();
+                    if (index < visibleTabs().size()) selectTab(visibleTabs().get(index));
                 }
                 default -> handled = false;
             }
@@ -393,8 +445,108 @@ public final class BrowserController {
         }
     }
 
+    public FeatureStore.State preferences() { return preferences; }
+    public Downloads downloads() { return downloads; }
+    public Path profileDirectory() { return store.directory(); }
+    public HistoryDAO history() { return historyDAO; }
+    public String currentUrl() { return active == null ? "" : active.page().locationProperty().get(); }
+    public BrowserPage currentPage() { return active == null || active.page().isHome() ? null : active.page().existingPage(); }
+    public boolean focusMode() { return focusMode; }
+    public void setFocusMode(boolean value) { focusMode = value; newTabButton.setDisable(value); refreshWorkspaceHeaders(); }
+    private List<Tab> visibleTabs() { return tabs.stream().filter(t -> preferences.workspace.equals(workspaces.get(t))).toList(); }
+    private void refreshWorkspaceHeaders() { for (Tab t : tabs) visible(t.chip(), preferences.workspace.equals(workspaces.get(t)) && (!focusMode || t == active)); }
+    public void createWorkspace(String name) {
+        name = name.trim();
+        if (name.isBlank() || name.length() > 40 || preferences.workspaces.contains(name) || preferences.workspaces.size() >= 50)
+            throw new IllegalArgumentException("Use a unique workspace name of 1–40 characters (up to 50 workspaces).");
+        if (!canCreateTab()) return;
+        preferences.workspaces.add(name); switchWorkspace(name);
+    }
+    public void switchWorkspace(String name) {
+        if (focusMode || !preferences.workspaces.contains(name)) return;
+        interactionVersion++; preferences.workspace = name;
+        List<Tab> candidates = visibleTabs();
+        if (candidates.isEmpty()) createTab(); else selectTab(candidates.getFirst());
+        refreshWorkspaceHeaders(); saveSession();
+    }
+    public void moveCurrentTab(String target) {
+        if (active == null || focusMode || !preferences.workspaces.contains(target)) return;
+        workspaces.put(active, target); preferences.workspace = target; refreshWorkspaceHeaders(); saveSession(); refreshChrome();
+    }
+    public void deleteWorkspace(String name) {
+        if (focusMode || "Default".equals(name) || !preferences.workspaces.contains(name)) return;
+        workspaces.replaceAll((t,w) -> name.equals(w) ? "Default" : w);
+        preferences.workspaces.remove(name); switchWorkspace("Default");
+    }
+    public void reopenClosedTab() {
+        if (recentlyClosed.isEmpty() || !canCreateTab()) return;
+        var saved = recentlyClosed.removeFirst();
+        createTab().page().restore(saved.url(), saved.title(), saved.zoom()); saveSession();
+    }
+    public void openNewUrl(String url) { if (closed || !canCreateTab()) return; createTab(); navigateTo(url); }
+    public void openPdf(Path path) {
+        if (!NativeWebPage.enabled()) { message("PDF viewer requires native macOS WebKit."); return; }
+        if (!canCreateTab()) return;
+        createTab().page().openPdf(path); saveSession();
+    }
+    @FXML public void features() {
+        if (!sessionReady) { message("Loading browser preferences…"); return; }
+        visible(library, false); visible(settings, false); visible(features, true); tabHost.setVisible(false);
+        updateActiveContent(); featuresController.show(); refreshChrome();
+    }
+    @FXML private void pdfPrevious() { pdfAction("pdfPrevious"); }
+    @FXML private void pdfNext() { pdfAction("pdfNext"); }
+    @FXML private void pdfZoomIn() { pdfAction("pdfZoomIn"); }
+    @FXML private void pdfZoomOut() { pdfAction("pdfZoomOut"); }
+    private void pdfAction(String action) { if (currentPage() instanceof NativeWebPage n) n.action(action, ""); }
+    public void saveSession() { if (!closed && sessionReady && !restoring && sessionEnabled) sessionDelay.playFromStart(); }
+    private FeatureStore.SavedTab savedTab(Tab t) { return new FeatureStore.SavedTab(workspaces.get(t), t.page().locationProperty().get(), t.page().titleProperty().get(), t.page().zoom()); }
+    private void persistSession() {
+        if (closed || !sessionReady || !sessionEnabled || restoring) return;
+        preferences.tabs = new ArrayList<>(tabs.stream().map(this::savedTab).toList());
+        preferences.selectedTab = Math.max(0, tabs.indexOf(active));
+        store.save(preferences).whenComplete((v,e) -> { if (e != null) Platform.runLater(() -> message("Could not save the browsing session.")); });
+    }
+    private void restoreSession() {
+        restoring = true;
+        var saved = List.copyOf(preferences.tabs); int selected = preferences.selectedTab;
+        for (Tab t : tabs) { t.header().dispose(); t.page().dispose(); }
+        tabs.clear(); workspaces.clear(); tabHost.getChildren().clear(); tabHeaders.getChildren().clear(); active = null;
+        for (var entry : saved) {
+            preferences.workspace = entry.workspace();
+            Tab t = createTab(); t.page().restoreDeferred(entry.url(), entry.title(), entry.zoom());
+        }
+        active.page().setActive(false); visible(active.content(), false); active = null;
+        selectTab(tabs.get(Math.clamp(selected, 0, tabs.size()-1)));
+        restoring = false; saveSession();
+    }
+    public void applyPrivacy() {
+        if (!NativeWebPage.enabled()) return;
+        int version = ++privacyVersion;
+        boolean block = preferences.blocker, secure = preferences.https, phishing = preferences.phishing;
+        var exceptions = List.copyOf(preferences.allowedSites);
+        store.rules(block, exceptions).whenComplete((rules,e) -> Platform.runLater(() -> {
+            if (closed || version != privacyVersion) return;
+            if (e != null) { message("Could not read blocking rules; existing rules remain active."); return; }
+            NativeWebPage.configurePrivacy(rules, secure, phishing).whenComplete((v,error) -> Platform.runLater(() -> {
+                if (error != null && !closed && version == privacyVersion) message("Blocking rules could not be applied. Check Browser tools and retry.");
+            }));
+        }));
+    }
+    public void pageLoaded(WebTabController tab) {
+        if (!preferences.fullText || !storageAvailable() || !UrlResolver.isWeb(tab.locationProperty().get())) return;
+        String url = tab.locationProperty().get(), title = tab.titleProperty().get(); BrowserPage page = tab.existingPage();
+        long generation = historyDAO.generation();
+        page.evaluate(PageText.INDEX).whenComplete((text,e) -> Platform.runLater(() -> {
+            if (closed || e != null || generation != historyDAO.generation() || !preferences.fullText || tab.existingPage() != page || !url.equals(tab.locationProperty().get()) || text == null || text.isBlank()) return;
+            try { perform("", historyDAO.index(title,url,text), v -> {}); } catch (IllegalArgumentException ignored) { }
+        }));
+    }
+
     public void close() {
         if (closed) return;
+        persistSession(); sessionDelay.stop(); featuresController.close(); store.close();
+        if (NativeWebPage.enabled()) NativeWebPage.shutdownServices();
         closed = true; bookmarkRequest++; toast.stop(); chromeRefresh.stop(); libraryController.dispose();
         for (Tab tab : tabs) { tab.header().dispose(); tab.page().dispose(); }
         tabs.clear();

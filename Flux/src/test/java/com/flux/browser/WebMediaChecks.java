@@ -22,6 +22,7 @@ import javafx.event.ActionEvent;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import com.flux.browser.web.BrowserPage;
+import com.flux.browser.web.NativeWebPage;
 import javafx.stage.Stage;
 
 /** Actual WebKit media counters and navigation timing, not an inferred video FPS from FX pulses. */
@@ -32,6 +33,9 @@ public final class WebMediaChecks {
             (() => {
               if (window.__fluxProbe) window.__fluxProbe.stop();
               const p = window.__fluxProbe = {start:performance.now(), raf:[], videos:[], active:true};
+              p.visibility = [{time:0, state:document.visibilityState}];
+              const visibilityChanged=()=>p.visibility.push({time:performance.now()-p.start,state:document.visibilityState});
+              document.addEventListener('visibilitychange', visibilityChanged);
               let before=0, rafId;
               function attach() {
                 document.querySelectorAll('video').forEach(v => {
@@ -58,7 +62,7 @@ public final class WebMediaChecks {
               function frame(now) {if(!p.active)return; if(before)p.raf.push(now-before); before=now;
                 rafId=requestAnimationFrame(frame);}
               attach(); const discover=setInterval(attach,250); rafId=requestAnimationFrame(frame);
-              p.stop=()=>{p.active=false; cancelAnimationFrame(rafId); clearInterval(discover);
+              p.stop=()=>{document.removeEventListener('visibilitychange', visibilityChanged);p.active=false; cancelAnimationFrame(rafId); clearInterval(discover);
                 p.videos.forEach(x=>{x.listeners.forEach(([n,f])=>x.element.removeEventListener(n,f));
                   if(x.rvfcAvailable && typeof x.element.cancelVideoFrameCallback==='function')
                     x.element.cancelVideoFrameCallback(x.callbackId);});};
@@ -69,13 +73,16 @@ public final class WebMediaChecks {
             (() => {
               const p=window.__fluxProbe, nav=performance.getEntriesByType('navigation')[0];
               const pct=(a,f)=>{const s=a.slice().sort((a,b)=>a-b); return s.length?s[Math.ceil(s.length*f)-1]:null;};
+              const elapsed=p?performance.now()-p.start:0;
+              const hiddenMs=p?p.visibility.reduce((sum,event,i)=>sum+(event.state==='hidden'
+                ?(p.visibility[i+1]?.time??elapsed)-event.time:0),0):null;
               const status=v=>({currentTime:v.currentTime, duration:Number.isFinite(v.duration)?v.duration:null,
                 paused:v.paused, ended:v.ended, muted:v.muted, readyState:v.readyState, networkState:v.networkState,
                 width:v.videoWidth, height:v.videoHeight, playbackRate:v.playbackRate,
                 buffered:Array.from({length:v.buffered.length},(_,i)=>[v.buffered.start(i),v.buffered.end(i)]),
                 error:v.error?{code:v.error.code,message:v.error.message}:null});
               return JSON.stringify({url:location.href,title:document.title,readyState:document.readyState,
-                visibility:document.visibilityState,resources:performance.getEntriesByType('resource').length,
+                visibility:document.visibilityState,hiddenMs,visibilityEvents:p?p.visibility:null,resources:performance.getEntriesByType('resource').length,
                 navigation:nav?{responseStart:nav.responseStart,responseEnd:nav.responseEnd,
                   domInteractive:nav.domInteractive,domContentLoadedEnd:nav.domContentLoadedEventEnd,
                   loadEnd:nav.loadEventEnd,duration:nav.duration,transferSize:nav.transferSize}:null,
@@ -162,12 +169,14 @@ public final class WebMediaChecks {
             BrowserChecks.check("true".equals(js("!!document.querySelector('video') && document.querySelector('video').currentTime > 0.1 && !document.querySelector('video').error")),
                     "Local H.264 playback advanced without a media error");
             if ("true".equals(System.getenv("FLUX_CHECK_SITES"))) {
+                if (!"true".equals(System.getenv("FLUX_YOUTUBE_ONLY"))) {
                 navigate("github", System.getenv().getOrDefault("FLUX_GITHUB_URL", "https://github.com/"));
                 sample("github");
                 navigate("youtube-search", "https://www.youtube.com/results?search_query=nature");
                 sample("youtube-search");
+                }
                 navigate("youtube", System.getenv().getOrDefault("FLUX_YOUTUBE_URL", "https://www.youtube.com/watch?v=jNQXAC9IVRw"));
-                js("var v=document.querySelector('video'); if(v){v.muted=true;v.play().catch(e=>window.__fluxAutoplayError=String(e));} true");
+                prepareYouTube();
                 sample("youtube");
             }
             BrowserChecks.check(uncaught.get() == null, "No uncaught JavaFX errors: " + uncaught.get());
@@ -189,6 +198,7 @@ public final class WebMediaChecks {
             var bar = (TextField) stage.getScene().lookup("#addressBar");
             bar.setText(url); bar.fireEvent(new ActionEvent()); return null;
         });
+        foreground();
         double firstDom = -1, success = -1;
         Worker.State state;
         do {
@@ -205,7 +215,47 @@ public final class WebMediaChecks {
                 quote(name), quote(url), elapsed(started), firstDom, success, quote(state.name()), snapshot());
     }
 
+    private static void foreground() throws Exception {
+        if (!"true".equals(System.getenv("FLUX_CHECK_FOREGROUND"))) return;
+        fx(() -> { if (web() instanceof NativeWebPage p) p.foregroundForTesting();
+            else { stage.toFront(); stage.requestFocus(); } return null; });
+        long start=System.nanoTime();
+        while (elapsed(start)<5000) {
+            if ("visible".equals(js("document.visibilityState"))) return;
+            Thread.sleep(100);
+        }
+        throw new AssertionError("Foreground test requires Flux's page to be visible; window activation did not succeed");
+    }
+
+    private static void prepareYouTube() throws Exception {
+        foreground();
+        String quality=System.getenv().getOrDefault("FLUX_YOUTUBE_QUALITY", "auto");
+        if (!quality.matches("auto|hd1080|hd720")) throw new IllegalArgumentException("Use auto, hd720 or hd1080 for FLUX_YOUTUBE_QUALITY");
+        long start=System.nanoTime();
+        // Test-only request through player capabilities. Actual decoded dimensions determine the result.
+        // Never assume the player honored a quality request or change production playback preferences.
+        boolean ready=false;
+        do {
+            js("(() => {const p=document.getElementById('movie_player'),v=document.querySelector('video');"
+                    + "if(!v)return false; v.muted=true; if(p && typeof p.mute==='function')p.mute();"
+                    + "const quality="+quote(quality)+";"
+                    + "if(quality!=='auto' && p && typeof p.getAvailableQualityLevels==='function'"
+                    + " && p.getAvailableQualityLevels().includes(quality) && typeof p.setPlaybackQualityRange==='function')"
+                    + "p.setPlaybackQualityRange(quality,quality);"
+                    + "if(v.paused)v.play().catch(e=>window.__fluxAutoplayError=String(e)); return true;})()");
+            ready="true".equals(js("(() => {const v=document.querySelector('video'); return !!v && !v.paused"
+                    + " && v.readyState>=3 && v.currentTime>0.1 && v.videoHeight>="
+                    + (quality.equals("hd1080")?1080:quality.equals("hd720")?720:1) + ";})()"));
+            if (ready) break;
+            Thread.sleep(500);
+        } while(elapsed(start)<30000);
+        System.out.printf("WEB_MEDIA playbackReady={\"requestedQuality\":%s,\"observed\":%s,\"waitAfterNavigationMs\":%.1f,\"page\":%s}%n",
+                quote(quality), ready, elapsed(start), snapshot());
+        if (!ready && !quality.equals("auto")) throw new AssertionError("YouTube did not start at requested quality " + quality);
+    }
+
     private static void sample(String name) throws Exception {
+        foreground();
         List<Double> pulses = new ArrayList<>(), queue = new ArrayList<>();
         var timer = new AnimationTimer() {
             long previous;
@@ -220,9 +270,13 @@ public final class WebMediaChecks {
         }
         fx(() -> { timer.stop(); return null; });
         String details = snapshot();
+        boolean remainedVisible="true".equals(js("!!window.__fluxProbe && window.__fluxProbe.visibility.every(e=>e.state==='visible')"));
         if (instrumented) try { js("if(window.__fluxProbe)window.__fluxProbe.stop(); true"); } catch (Exception ignored) { }
         System.out.printf("WEB_MEDIA sample={\"site\":%s,\"elapsedMs\":%.1f,\"instrumented\":%s,\"fxPulse\":%s,\"fxQueue\":%s,\"page\":%s}%n",
                 quote(name), elapsed(start), instrumented, statistics(pulses), statistics(queue), details);
+        if ("true".equals(System.getenv("FLUX_CHECK_FOREGROUND"))) {
+            BrowserChecks.check(instrumented && remainedVisible, "Foreground sample invalid: " + name + " became hidden (see visibilityEvents)");
+        }
     }
 
     private static String snapshot() {

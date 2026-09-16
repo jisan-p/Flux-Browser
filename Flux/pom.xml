@@ -15,10 +15,13 @@
         <!-- Compatibility fallback; modern macOS uses Metal for web/video composition below. -->
         <flux.rendering>sw</flux.rendering>
         <flux.maxHeap>1024m</flux.maxHeap>
+        <flux.fullspeed>false</flux.fullspeed>
+        <flux.showFps>false</flux.showFps>
         <flux.engine>native</flux.engine>
         <flux.mainClass>com.flux.browser/com.flux.browser.FluxBrowser</flux.mainClass>
     </properties>
     <dependencies>
+        <dependency><groupId>com.google.code.gson</groupId><artifactId>gson</artifactId><version>2.13.2</version></dependency>
         <dependency>
             <groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId><version>${javafx.version}</version>
         </dependency>
@@ -71,6 +74,8 @@
                         <option>-Xms64m</option>
                         <option>-Xmx${flux.maxHeap}</option>
                         <option>-Dprism.order=${flux.rendering}</option>
+                        <option>-Djavafx.animation.fullspeed=${flux.fullspeed}</option>
+                        <option>-Dprism.showfps=${flux.showFps}</option>
                     </options>
                 </configuration>
             </plugin>
@@ -96,7 +101,7 @@
                 <configuration><options combine.children="append">
                     <option>--patch-module=com.flux.browser=${project.build.testOutputDirectory}</option>
                     <option>--add-modules=jdk.httpserver,java.desktop</option>
-                    <option>-Dflux.testInput=true</option>
+                    <option>-Dflux.testInput=true</option><option>-Dflux.session=false</option>
                 </options></configuration>
             </plugin></plugins></build>
         </profile>
@@ -131,6 +136,7 @@
                         <executable>${java.home}/bin/java</executable><classpathScope>test</classpathScope>
                         <arguments>
                             <argument>--enable-native-access=ALL-UNNAMED</argument>
+                            <argument>-Dflux.testInput=true</argument><argument>-Dflux.session=false</argument>
                             <argument>-Dflux.engine=${flux.engine}</argument>
                             <argument>-Xms64m</argument>
                             <argument>-Xmx${flux.maxHeap}</argument>
@@ -160,7 +166,7 @@
                             <argument>-Xmx${flux.maxHeap}</argument>
                             <argument>-Dprism.order=${flux.rendering}</argument>
                             <argument>-Dprism.verbose=true</argument>
-                            <argument>-Dflux.check.lazy=${flux.check.lazy}</argument>
+                            <argument>-Dflux.check.lazy=${flux.check.lazy}</argument><argument>-Dflux.session=false</argument>
                             <argument>-cp</argument><classpath/>
                             <argument>com.flux.browser.PerformanceChecks</argument>
                         </arguments>
@@ -194,13 +200,35 @@
                         <executable>${java.home}/bin/java</executable><classpathScope>test</classpathScope>
                         <arguments>
                             <argument>--enable-native-access=ALL-UNNAMED</argument>
-                            <argument>-Dflux.testInput=true</argument>
+                            <argument>-Dflux.testInput=true</argument><argument>-Dflux.session=false</argument>
                             <argument>-Dflux.engine=${flux.engine}</argument>
                             <argument>-Xms64m</argument>
                             <argument>-Xmx${flux.maxHeap}</argument>
                             <argument>-Dprism.order=${flux.rendering}</argument>
                             <argument>-cp</argument><classpath/>
                             <argument>com.flux.browser.BrowserSmokeChecks</argument>
+                        </arguments>
+                    </configuration>
+                </execution></executions>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>feature-ui-check</id>
+            <build><plugins><plugin>
+                <groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId>
+                <executions><execution>
+                    <id>feature-ui-checks</id><phase>integration-test</phase><goals><goal>exec</goal></goals>
+                    <configuration>
+                        <executable>${java.home}/bin/java</executable><classpathScope>test</classpathScope>
+                        <arguments>
+                            <argument>--enable-native-access=ALL-UNNAMED</argument>
+                            <argument>-Dflux.testInput=true</argument><argument>-Dflux.session=false</argument>
+                            <argument>-Dflux.engine=${flux.engine}</argument>
+                            <argument>-Xms64m</argument>
+                            <argument>-Xmx${flux.maxHeap}</argument>
+                            <argument>-Dprism.order=${flux.rendering}</argument>
+                            <argument>-cp</argument><classpath/>
+                            <argument>com.flux.browser.FeatureUiChecks</argument>
                         </arguments>
                     </configuration>
                 </execution></executions>

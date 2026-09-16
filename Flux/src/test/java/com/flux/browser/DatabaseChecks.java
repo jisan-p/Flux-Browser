@@ -38,7 +38,14 @@ public final class DatabaseChecks {
             BrowserChecks.equal(visits.get(1).id(), first);
             BrowserChecks.equal(history.getHistory("' quote").get().size(), 1);
             BrowserChecks.equal(history.getHistory("% OR 1=1").get().size(), 0);
+            history.index("First", "https://example.com/first", "A quokka lives among eucalyptus trees.").get();
+            BrowserChecks.equal(history.searchText("quokka").get().size(),1);
+            BrowserChecks.equal(history.getHistory("quokka").get().size(),0);
+            history.index("First", "https://example.com/first", "A wombat replaced the previous content.").get();
+            BrowserChecks.equal(history.searchText("quokka").get().size(),0);
+            BrowserChecks.equal(history.searchText("wombat").get().size(),1);
             history.deleteHistory(first).get();
+            BrowserChecks.equal(history.searchText("wombat").get().size(),0);
             BrowserChecks.equal(history.getHistory("").get().size(), 1);
 
             var bookmark = bookmarks.save(0, "A ' bookmark", "https://example.com/flux-test-bookmark", "Study").get();

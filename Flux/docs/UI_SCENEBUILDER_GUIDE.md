@@ -1,6 +1,6 @@
 # Flux UI and Scene Builder field guide
 
-This guide covers all 13 FXML views and their dedicated controllers. It is designed for a live demonstration in which you open the actual layout, explain the Java binding, change a visual property, and relaunch the app.
+This guide covers all 15 FXML views and their dedicated controllers. It is designed for a live demonstration in which you open the actual layout, explain the Java binding, change a visual property, and relaunch the app.
 
 ## 1. Open the correct files
 
@@ -24,7 +24,7 @@ Save changes in **src/main/resources**, close the running Flux window, and run `
 
 Runtime dependencies arrive separately through `configure(...)`. This keeps FXML loading independent from database setup and lets reusable components have their own ordinary controllers. For example, loading `WebTab.fxml` also loads `SpeedDial.fxml`; `fx:include fx:id="speedDial"` injects both the included root as `speedDial` and its controller as `speedDialController` into `WebTabController`.
 
-**Keep `fx:id`, `fx:controller`, and event-handler names unchanged when making cosmetic edits.** Change text, alignment, spacing, padding, sizes, style classes, or SVG geometry. Renaming an injected field or action requires a corresponding Java edit and rebuild. Controllers never manufacture the application's Label/Button/Pane layouts in Java; they load FXML instances into existing containers. A standard ListCell is used as the JavaFX list's virtualization wrapper, with its entire visible row loaded from FXML.
+**Keep `fx:id`, `fx:controller`, and event-handler names unchanged when making cosmetic edits.** Change text, alignment, spacing, padding, sizes, style classes, or SVG geometry. Renaming an injected field or action requires a corresponding Java edit and rebuild. Controllers never manufacture the application's Label/Button/Pane layouts in Java; they load FXML instances into existing containers. The library uses FXML-backed list rows; Browser tools uses standard text-only ListCell rendering for providers, downloads, and search results.
 
 ## 3. Component inventory
 
@@ -40,6 +40,8 @@ Runtime dependencies arrive separately through `configure(...)`. This keeps FXML
 | `DialTile.fxml` | `DialTileController` | One shortcut's open/edit/delete controls | SpeedDialController per record |
 | `Library.fxml` | `LibraryController` | Searchable bookmarks/history screen | Included by BrowserWindow |
 | `LibraryRow.fxml` | `LibraryRowController` | One bookmark or visit row | LibraryController's ListCell |
+| `Features.fxml` | `FeaturesController` | Workspaces, privacy, search, passwords, downloads and page tools | Included by BrowserWindow |
+| `Reader.fxml` | `ReaderController` | Extracted article text, font size and original-page action | Reader mode action |
 | `Settings.fxml` | `SettingsController` | Theme, current-tab zoom, storage connection | Included by BrowserWindow |
 | `EntryDialog.fxml` | `EntryDialogController` | Add/edit bookmark or shortcut | `Dialogs.edit` |
 | `MessageDialog.fxml` | `MessageDialogController` | Confirmation, webpage alert, or webpage prompt | `Dialogs.confirm/alert/prompt` |
@@ -227,3 +229,13 @@ For a short CSS demonstration, change `.hero-title`'s font size or `.dial-tile`'
 5. If you changed a reusable component, inspect more than one instance: multiple tab chips, saved rows, or shortcuts. A successful FXML parse alone does not prove the layout fits long runtime content.
 
 The automated `ui-check` Maven profile loads the actual FXML, drives real WebKit and UI actions, and writes screenshots for visual inspection. See [README.md](../README.md) for the disposable database setup and [VERIFICATION.md](VERIFICATION.md) for recorded results.
+
+## Browser tools and reader components
+
+`Features.fxml` is included as `features` in BrowserWindow; its controller is injected as `featuresController`. The Tools button invokes `BrowserController.features()`, hides the native page, and refreshes settings into five standard TabPane sections. Workspace selection has a separate **Switch workspace** button, so **Move current tab here** uses the chosen destination without switching first. `restore`, `focus`, `blocker`, `https`, `phishing`, and `fullText` bind through explicit action handlers.
+
+`language` selects the target for **Translate page ↗**. `readerButton` opens an owned Reader window after asynchronous extraction. `passwordProvider`, `loginUser`, and `loginPassword` supply explicit password actions; the password field is cleared when the panel opens and immediately after saving. The downloads ListView shows status and byte progress, with user-triggered cancel/reveal/PDF actions. Editing Tab captions, spacing, and preferred list heights is safe in Scene Builder; keep action names and IDs intact.
+
+`Reader.fxml` contains heading/byline labels, a scrolling article label, font-size buttons and **Open original**. Its controller renders Readability's text content, avoiding active HTML inside the reader. Adjust the label padding or font size in FXML and preserve `title`, `byline`, and `article`.
+
+BrowserWindow's `documentBar` holds FXML PDF page and zoom buttons. It is managed only while a PDF is selected and no shell panel covers it. The actual document is rendered by native PDFKit; its embedded viewport cannot render inside Scene Builder. The same applies to WKWebView.

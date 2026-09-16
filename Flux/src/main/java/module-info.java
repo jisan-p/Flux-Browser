@@ -3,6 +3,9 @@ module com.flux.browser {
     requires javafx.fxml;
     requires javafx.web;
     requires java.sql;
+    requires java.net.http;
+    requires com.google.gson;
+    opens com.flux.browser.feature to com.google.gson;
     requires org.postgresql.jdbc;
     // Optional smoke checks use these JDK APIs; the browser does not start an HTTP server.
     requires static jdk.httpserver;

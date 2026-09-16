@@ -45,3 +45,13 @@ END
 $schema$;
 CREATE INDEX IF NOT EXISTS speed_dial_position_idx ON speed_dial (position, id);
 
+
+-- Opt-in page text index. One bounded snapshot per URL; no password forms are indexed.
+CREATE TABLE IF NOT EXISTS page_text (
+    url VARCHAR(2048) PRIMARY KEY,
+    title VARCHAR(512) NOT NULL,
+    body TEXT NOT NULL CHECK (length(body) <= 200000),
+    captured_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    document TSVECTOR GENERATED ALWAYS AS (to_tsvector('simple', title || ' ' || body)) STORED
+);
+CREATE INDEX IF NOT EXISTS page_text_document_idx ON page_text USING GIN(document);

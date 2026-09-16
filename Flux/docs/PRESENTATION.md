@@ -61,4 +61,10 @@ These read-only queries make the persistent data visible without exposing creden
 
 **What survives restart?** Bookmarks, visit history, and Speed Dial. Open tabs, accent selection, and page zoom belong to the current session.
 
-**What was omitted from Min?** Full-text indexing, filtering lists, task workspaces, password-manager integrations, downloads, reader/translation/PDF subsystems, and session restore. The complete matrix is in `ARCHITECTURE.md`.
+**What was originally omitted from Min?** Those feature groups are now implemented through Tools: workspaces/session restore, filtering, password providers, full-text search, reader/translation, downloads, and PDF viewing. Demonstrate the bounded scope in `FEATURES.md`: declarative search templates, domain filtering, and system services rather than a general extension runtime.
+
+## Browser tools demonstration
+
+Open **Tools**. Create a Study workspace and move a tab into it; enable Focus mode, then turn it off before opening another tab. Enter `= (12 + 8) / 4` in the address bar and then `!gh javafx`. On a public article, open Reader mode or choose a language and Translate page; translation opens a separate tab.
+
+For a local demonstration, download a known small PDF, then use Downloads → Open downloaded PDF to show page and zoom controls. In Passwords, select macOS Keychain and use a disposable HTTPS login you control; filling is explicit and does not submit the form. Enable page-text indexing only if you want the visited content stored locally. Close and relaunch to show session restore while background tabs remain unloaded.

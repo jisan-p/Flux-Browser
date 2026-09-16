@@ -45,6 +45,37 @@ To check the normal named-module launcher, use the same disposable/offline datab
 
 Use `FLUX_YOUTUBE_URL` to choose another public video. Keep the test window visible. Native page snapshots and shell screenshots are separate artifacts under `target/screenshots/`. The JNI library targets the running JDK architecture and is packaged under `native/<os.arch>/`; Xcode Command Line Tools are required to build it. macOS 12 is the deployment target; the executed platform is macOS 26.3 on M3, not every older macOS release.
 
+## Foreground media follow-up
+
+The strict foreground run passed on September 16 at 17:54 (machine-reported time), JDK 26 / JavaFX 26.0.2, native WKWebView, Retina 2×. Both local and YouTube samples reported `hiddenMs=0` and only the initial visible event.
+
+| Observation | Local 1080p60 fixture | YouTube `aqz-KE-bpKQ`, requested hd1080 |
+| --- | ---: | ---: |
+| Decoded dimensions at sample end | 1920×1080 | 1920×1080 |
+| Sample duration | 10.060 s | 10.056 s |
+| Media time advanced | 10.058 s | 9.690 s |
+| Video-frame callback count | 327 | 577 |
+| Playback-quality total / dropped delta | 607 / 4 | 534 / 0 |
+| Stalled / waiting events during sample | 0 / 0 | 2 / 0 |
+| FX queue wait p95 / maximum | 0.40 / 3.23 ms | 0.17 / 4.66 ms |
+
+The YouTube document completed navigation in 3.687 s; requested 1080p playback readiness was observed another 1.090 s later. Its frame callback rate was approximately 57 callbacks/second over the sample. Video-frame callbacks, playback-quality counters, media time, and physical presentation are different measurements; their counts are not interchangeable. This supports working foreground high-resolution playback and responsive shell input, not a universal 60 FPS or stall-free guarantee. The ten-second observation is not a long-duration stress test.
+
+
+`WebMediaChecks` can explicitly bring Flux forward with `FLUX_CHECK_FOREGROUND=true`. It records every page visibility transition and the total hidden time, and fails a foreground sample if the document becomes hidden. This prevents a backgrounded test from being reported as a foreground playback result. Activation is a guarded test hook; normal browsing never uses it to steal focus.
+
+The YouTube probe waits separately for playback readiness after document navigation. Set `FLUX_YOUTUBE_QUALITY=hd1080` (or `hd720`) to request a quality through available player capabilities. The check verifies actual decoded video dimensions before sampling and fails if that resolution is not reached within 30 seconds. It does not assume that a quality request was honored. These player methods are site-specific diagnostic hooks, not production browsing behavior. `FLUX_YOUTUBE_ONLY=true` skips the GitHub/search observations for targeted playback checks.
+
+```sh
+FLUX_EXPECT_STORAGE=false FLUX_DB_URL=jdbc:postgresql://127.0.0.1:1/flux_test \
+  FLUX_MEDIA_FILE=/private/tmp/flux-1080p60.mp4 FLUX_CHECK_SITES=true \
+  FLUX_YOUTUBE_ONLY=true FLUX_CHECK_FOREGROUND=true FLUX_YOUTUBE_QUALITY=hd1080 \
+  FLUX_YOUTUBE_URL='https://www.youtube.com/watch?v=aqz-KE-bpKQ' \
+  mvn -Pweb-media-check verify
+```
+
+The launcher retains the recently added `javafx.animation.fullspeed` and `prism.showfps` switches as opt-in Maven properties (`flux.fullspeed`, `flux.showFps`, both false by default). Installed JavaFX 26.0.2 bytecode and [OpenJFX PrismSettings](https://github.com/openjdk/jfx/blob/master/modules/javafx.graphics/src/main/java/com/sun/prism/impl/PrismSettings.java) confirm that fullspeed disables Prism VSync. It affects the JavaFX shell, not WKWebView's compositor; it is not a suitable default video-performance fix.
+
 ## Earlier JavaFX WebView measurements (September 13–14)
 
 The browser now creates WebKit only on a tab's first web navigation. Blank tabs use native FXML only. Loaded tabs stay attached to the scene but are hidden and unmanaged when inactive, avoiding scene reconstruction on every switch. Hidden home clocks stop, hidden shortcut queries wait until needed, unchanged FXML tiles/rows are reused, and bursts of page events update the toolbar once per JavaFX pulse.
@@ -133,3 +164,39 @@ The retained [Speed Dial screenshot](images/flux-speed-dial.png) is included in 
 Windows and Linux were not executed in this environment. Maven's platform-native dependency selection is configured, but those platforms still need their own desktop smoke test. Scene Builder's GUI was not automated; the FXML itself was loaded by JavaFX, and the guide provides the live-edit workflow. Site compatibility remains dependent on WebKit's supported web APIs and media formats. This is a functional desktop MVP, not a substitute for a full Chromium browser.
 
 To reproduce the checks, use the commands and disposable database instructions in [README.md](../README.md). The five-minute demonstration is in [PRESENTATION.md](PRESENTATION.md), and every UI/controller binding is documented in [UI_SCENEBUILDER_GUIDE.md](UI_SCENEBUILDER_GUIDE.md).
+
+## Expanded browser tools — September 16, 2026
+
+The omitted-feature implementation is documented in [FEATURES.md](FEATURES.md). Checks use generated local HTTP/PDF fixtures and isolated session profiles; normal user tabs, history and credentials are not test fixtures.
+
+| Check | Observed result |
+| --- | --- |
+| Core `mvn test` | Session save/load and malformed-state validation, plugin URL encoding, arithmetic, HTTPS origin validation, domain boundaries and Readability resource loading passed. |
+| Existing native UI suite | Navigation, popup handling, shortcuts, tab lifecycle, stop/error recovery, settings and offline browsing passed with sessions disabled for isolation. |
+| Normal named-module launcher | The new feature suite passed through `module-ui-check` with `flux.mainClass` set to `com.flux.browser/com.flux.browser.FeatureUiChecks`, including Gson reflection, FXML and JNI exports. |
+| New `feature-ui-check` | Lazy restore and restart, workspace move/focus behavior, arithmetic, reader extraction, translation new-tab URL, actual WebKit blocking, downloaded byte equality, replacing a fixture file, PDFKit rendering and return to web browsing passed. |
+| macOS Keychain | Save/read/update/delete passed with a uniquely named disposable login under `https://flux-feature-test.invalid`; the test entry was removed and absence verified. Existing logins were not queried. |
+| Live filter update | AdGuard DNS Filter downloaded successfully; 30,000 supported domain rules imported into a temporary profile. |
+| PostgreSQL `database-check` | New content-only term search, replacing indexed text and purging text when deleting visits passed, alongside existing JDBC concurrency/CRUD checks. |
+| PDF visual review | Corrected initial scroll position after native viewport layout. An OS screenshot confirmed first-page text is visible. `snapshot` uses PDFKit's page raster API for PDFs, because NSView cache capture omits PDFKit's compositor tiles. |
+| Compact UI | Reviewed Browser tools at 940×650, with privacy controls accessible through scrolling. |
+
+The local foreground 1920×1080 H.264/60 fixture was rerun with the expanded feature build. In a 10.112-second instrumented sample, the page reported **zero waiting/stalled events**, 529 video-frame callbacks and 3 dropped frames in the playback-quality counter. JavaFX queue latency was **0.49 ms p95**; pulse interval was **17.70 ms p95**. These are distinct diagnostic counters, not a physical-screen FPS guarantee. This regression run did not retest public GitHub/YouTube; the earlier public-site measurements above remain separate evidence.
+
+Run the deterministic feature checks through `mvn test`. For desktop fixtures:
+
+```sh
+mvn -Pfeature-ui-check verify
+```
+
+Optional feature checks are explicit:
+
+```sh
+FLUX_CHECK_FILTERS=true mvn -Pfeature-ui-check verify
+FLUX_CHECK_KEYCHAIN=true mvn -Pfeature-ui-check verify
+FLUX_CHECK_PDF_SCREEN=true mvn -Pfeature-ui-check verify
+```
+
+The Keychain option creates and removes one test login. The screen option brings only Flux forward and captures its test window; macOS screen-capture permissions may apply. PDF page rasters and JavaFX scene captures do not need that optional screen check. Ordinary feature runs do not inspect external vaults.
+
+The Bitwarden/1Password command adapters have not been verified against signed-in accounts. Live phishing-warning responses, particular known-host HTTPS upgrade decisions and translated third-party page content were not asserted; the tests verify the configured controls and translation destination. Downloads have no resumable state after app exit. See the feature guide for the implemented limits.

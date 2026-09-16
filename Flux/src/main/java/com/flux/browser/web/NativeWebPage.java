@@ -21,6 +21,42 @@ public final class NativeWebPage extends BrowserPage {
     private static final Map<Long, NativeWebPage> PAGES = new ConcurrentHashMap<>(); // Native callbacks may check liveness; page state stays on FX.
     private static final AtomicLong IDS = new AtomicLong();
     private static boolean libraryLoaded;
+    private static final Map<Long, CompletableFuture<String>> SERVICES = new ConcurrentHashMap<>();
+    private static volatile java.util.function.Consumer<String> downloadListener;
+    private static String lastRules;
+    private static boolean lastHttps, lastPhishing;
+    private static CompletableFuture<String> lastPrivacy;
+    public java.util.function.Consumer<String> openUrl = u -> {};
+    public final javafx.beans.property.ReadOnlyBooleanWrapper pdf = new javafx.beans.property.ReadOnlyBooleanWrapper();
+    public static void downloadListener(java.util.function.Consumer<String> listener) { downloadListener = listener; }
+    public static CompletableFuture<String> configurePrivacy(String rules, boolean https, boolean phishing) {
+        loadLibrary();
+        if (rules.equals(lastRules) && https == lastHttps && phishing == lastPhishing && lastPrivacy != null && !lastPrivacy.isCompletedExceptionally()) return lastPrivacy;
+        lastRules = rules; lastHttps = https; lastPhishing = phishing;
+        long token = IDS.incrementAndGet();
+        var result = new CompletableFuture<String>(); lastPrivacy = result; SERVICES.put(token,result);
+        configureServices(token,rules,https,phishing);
+        result.orTimeout(90,TimeUnit.SECONDS).whenComplete((v,e) -> SERVICES.remove(token)); return result;
+    }
+    public static void downloadAction(long id, String action) { if (libraryLoaded) serviceAction(id,action); }
+    public static void shutdownServices() {
+        downloadListener = null; lastRules = null; lastPrivacy = null;
+        SERVICES.values().forEach(f -> f.completeExceptionally(new CancellationException("Browser closed"))); SERVICES.clear();
+        if (libraryLoaded) serviceAction(0,"shutdown");
+    }
+    public void action(String name, String value) {
+        if (closed) return;
+        if (name.equals("pdfOpen")) { pdf.set(true); state.set(Worker.State.SCHEDULED); }
+        command(id,name,value);
+    }
+    public CompletableFuture<String> keychain(String operation, String origin, String user, char[] password) {
+        if (closed) return CompletableFuture.failedFuture(new IllegalStateException("Tab closed"));
+        if (!com.flux.browser.feature.PasswordProviders.origin(origin).equals(origin) || user.isBlank() || user.length()>512 || user.indexOf('\n')>=0 || password.length>16384)
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Enter a valid HTTPS origin and username."));
+        long token = ++request; var result = new CompletableFuture<String>(); scripts.put(token,result);
+        credential(id,token,operation,origin,user,password);
+        result.orTimeout(90,TimeUnit.SECONDS).whenComplete((v,e) -> Platform.runLater(() -> scripts.remove(token))); return result;
+    }
     private final long id;
     private final Stage owner;
     private final StackPane viewport;
@@ -60,6 +96,7 @@ public final class NativeWebPage extends BrowserPage {
             Path lib = Files.createTempFile("flux-webkit-", ".dylib");
             Files.copy(input, lib, StandardCopyOption.REPLACE_EXISTING); lib.toFile().deleteOnExit();
             System.load(lib.toAbsolutePath().toString()); libraryLoaded = true;
+            configureServices(0, com.flux.browser.feature.ContentRules.starterRules(), true, true);
         } catch (IOException e) { throw new IllegalStateException("Cannot load native macOS WebKit", e); }
     }
     private static long windowHandle(Stage stage) {
@@ -88,7 +125,7 @@ public final class NativeWebPage extends BrowserPage {
         }
     }
     public Node view() { return viewport; }
-    public void load(String url) { state.set(Worker.State.SCHEDULED); command(id, "load", url); }
+    public void load(String url) { pdf.set(false); state.set(Worker.State.SCHEDULED); command(id, "load", url); }
     public void back() { state.set(Worker.State.SCHEDULED); command(id, "back", ""); }
     public void forward() { state.set(Worker.State.SCHEDULED); command(id, "forward", ""); }
     public void reload() { state.set(Worker.State.SCHEDULED); command(id, "reload", ""); }
@@ -109,7 +146,7 @@ public final class NativeWebPage extends BrowserPage {
         future.orTimeout(15, TimeUnit.SECONDS).whenComplete((v, e) -> Platform.runLater(() -> scripts.remove(token)));
         return future;
     }
-    /** Native page-only snapshot: JavaFX Scene.snapshot cannot capture an embedded NSView. */
+    /** Web viewport snapshot, or a raster of the current PDF page. JavaFX cannot capture embedded NSViews. */
     public CompletableFuture<String> snapshot(Path destination) {
         if (closed) return CompletableFuture.failedFuture(new IllegalStateException("Tab closed"));
         long token = ++request;
@@ -130,12 +167,19 @@ public final class NativeWebPage extends BrowserPage {
     }
     // Called from AppKit via JNI. Keep this entry point nonblocking, even for popups and JS evaluation.
     private static void event(long id, String kind, String value, long token, double number) {
+        if (kind.equals("download")) { if (downloadListener != null) Platform.runLater(() -> { var listener = downloadListener; if(listener != null) listener.accept(value); }); return; }
+        if (kind.equals("service") || kind.equals("serviceError")) {
+            var result = SERVICES.remove(token);
+            if (result != null) { if (kind.equals("service")) result.complete(value); else result.completeExceptionally(new IllegalStateException(value)); } return;
+        }
         // Do not schedule into Glass after its last page has been disposed during toolkit shutdown.
         if (!PAGES.containsKey(id)) { if (kind.equals("popup")) destroy(token); return; }
         Platform.runLater(() -> {
             NativeWebPage p = PAGES.get(id);
             if (p == null) { if (kind.equals("popup")) destroy(token); return; }
             switch (kind) {
+                case "openURL" -> p.openUrl.accept(value);
+                case "document" -> p.pdf.set(token != 0);
                 case "url" -> p.location.set(value);
                 case "title" -> p.title.set(value);
                 case "progress" -> p.progress.set(number);
@@ -159,6 +203,23 @@ public final class NativeWebPage extends BrowserPage {
         if (!Boolean.getBoolean("flux.testInput")) throw new IllegalStateException("Test input is disabled");
         command(id, "testKey", key);
     }
+    /** Brings only Flux forward for an explicitly requested foreground media test. */
+    public void foregroundForTesting() {
+        if (!Boolean.getBoolean("flux.testInput")) throw new IllegalStateException("Test input is disabled");
+        if (closed) throw new IllegalStateException("Tab closed");
+        command(id, "testForeground", "");
+    }
+    public static void downloadDestinationForTesting(Path destination) throws IOException {
+        if (!Boolean.getBoolean("flux.testInput")) throw new IllegalStateException("Test input disabled");
+        Path parent = destination.toAbsolutePath().getParent().toRealPath();
+        if (!(parent.startsWith(Path.of("/private/tmp")) || parent.startsWith(Path.of(System.getProperty("java.io.tmpdir")).toRealPath())))
+            throw new IllegalArgumentException("Download test destination must be temporary");
+        loadLibrary(); testDownloadPath(parent.resolve(destination.getFileName()).toString());
+    }
+    private static native void testDownloadPath(String path);
+    private static native void configureServices(long token, String rules, boolean https, boolean phishing);
+    private static native void serviceAction(long id, String action);
+    private static native void credential(long id, long token, String operation, String origin, String user, char[] password);
     private static native void create(long id, long window);
     private static native void attach(long id, long window);
     private static native void frame(long id, double x, double y, double width, double height, boolean visible);

@@ -37,9 +37,16 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
     (*env)->DeleteLocalRef(env, k); (*env)->DeleteLocalRef(env, v);
 }
 
-@interface FluxPage : NSObject <WKNavigationDelegate, WKUIDelegate>
+#include "FluxServices.h"
+
+@interface FluxPage : NSObject <WKNavigationDelegate, WKUIDelegate, PDFViewDelegate>
 @property(nonatomic) long long identifier;
 @property(nonatomic, strong) WKWebView *web;
+@property(nonatomic, strong) PDFView *pdf;
+@property(nonatomic, copy) NSString *pdfPath;
+@property(nonatomic) BOOL shown;
+@property(nonatomic) NSUInteger documentVersion;
+@property(nonatomic) BOOL positionPdf;
 @property(nonatomic, weak) NSWindow *owner;
 @property(nonatomic, weak) NSView *glass;
 @property(nonatomic) BOOL disposed;
@@ -58,6 +65,9 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
     self = [super init];
     if (self) {
         _identifier = identifier;
+        configuration.preferences.fraudulentWebsiteWarningEnabled = phishingWarnings;
+        configuration.upgradeKnownHostsToHTTPS = secureHosts;
+        if (blockingRules) [configuration.userContentController addContentRuleList:blockingRules];
         _web = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration];
         _web.navigationDelegate = self; _web.UIDelegate = self;
         _web.hidden = YES;
@@ -75,6 +85,11 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
 }
 - (void)publish {
     if (self.disposed) return;
+    if (self.pdf) {
+        emit(self.identifier, @"url", [NSURL fileURLWithPath:self.pdfPath].absoluteString,0,0);
+        emit(self.identifier, @"title", self.pdfPath.lastPathComponent,0,0);
+        emit(self.identifier, @"history", @"",0,0); return;
+    }
     emit(self.identifier, @"url", self.web.URL.absoluteString, 0, 0);
     emit(self.identifier, @"title", self.web.title, 0, 0);
     emit(self.identifier, @"progress", @"", 0, self.web.estimatedProgress);
@@ -106,8 +121,18 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
     NSString *scheme = action.request.URL.scheme.lowercaseString;
     // Preserve normal TLS validation. Do not auto-launch external programs from page navigation.
     BOOL allowed = [@[@"http", @"https", @"about", @"blob", @"data"] containsObject:scheme];
-    decision(allowed ? WKNavigationActionPolicyAllow : WKNavigationActionPolicyCancel);
+    WKNavigationActionPolicy policy = allowed ? (action.shouldPerformDownload ? WKNavigationActionPolicyDownload : WKNavigationActionPolicyAllow) : WKNavigationActionPolicyCancel;
+    if (allowed && rulesLoading) {
+        if (!pendingLoads) pendingLoads = [NSMutableArray new];
+        [pendingLoads addObject:^{ decision(self.disposed ? WKNavigationActionPolicyCancel : policy); }];
+    } else decision(policy);
 }
+- (void)webView:(WKWebView *)web decidePolicyForNavigationResponse:(WKNavigationResponse *)response decisionHandler:(void (^)(WKNavigationResponsePolicy))decision {
+    // PDF is downloaded explicitly and can then be opened in Flux's PDFKit viewer.
+    decision(response.canShowMIMEType ? WKNavigationResponsePolicyAllow : WKNavigationResponsePolicyDownload);
+}
+- (void)webView:(WKWebView *)web navigationAction:(WKNavigationAction *)action didBecomeDownload:(WKDownload *)download { trackDownload(download,self.owner); emit(self.identifier,@"finish",@"",0,0); }
+- (void)webView:(WKWebView *)web navigationResponse:(WKNavigationResponse *)response didBecomeDownload:(WKDownload *)download { trackDownload(download,self.owner); emit(self.identifier,@"finish",@"",0,0); }
 - (WKWebView *)webView:(WKWebView *)web createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
         forNavigationAction:(WKNavigationAction *)action windowFeatures:(WKWindowFeatures *)features {
     // Returning the configured view preserves POST popups and window.opener; do not re-load the URL.
@@ -117,6 +142,9 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
     return child.web;
 }
 - (void)webViewDidClose:(WKWebView *)web { emit(self.identifier, @"close", @"", 0, 0); }
+- (void)PDFViewWillClickOnLink:(PDFView *)sender withURL:(NSURL *)url {
+    if ([@[@"http",@"https"] containsObject:url.scheme.lowercaseString]) emit(self.identifier,@"openURL",url.absoluteString,0,0);
+}
 - (NSAlert *)alert:(NSString *)message frame:(WKFrameInfo *)frame {
     NSAlert *alert = [NSAlert new];
     alert.messageText = frame.request.URL.host ?: @"Page message";
@@ -152,7 +180,7 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
     for (NSString *key in @[@"URL", @"title", @"estimatedProgress", @"canGoBack", @"canGoForward"])
         [self.web removeObserver:self forKeyPath:key];
     self.web.navigationDelegate = nil; self.web.UIDelegate = nil;
-    [self.web stopLoading]; [self.web removeFromSuperview]; self.web = nil;
+    [self.web stopLoading]; [self.web removeFromSuperview]; self.web = nil; [self.pdf removeFromSuperview]; self.pdf.document = nil; self.pdf = nil;
 }
 @end
 
@@ -161,15 +189,17 @@ static void installKeys(void) {
     keyMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown handler:^NSEvent *(NSEvent *event) {
         for (FluxPage *p in pages.allValues) {
             NSResponder *responder = p.owner.firstResponder;
-            if (p.web.hidden || event.window != p.owner || ![responder isKindOfClass:NSView.class]
-                || ![(NSView *)responder isDescendantOf:p.web]) continue;
+            NSView *content = p.pdf ?: p.web;
+            if (content.hidden || event.window != p.owner || ![responder isKindOfClass:NSView.class]
+                || ![(NSView *)responder isDescendantOf:content]) continue;
             BOOL cmd = (event.modifierFlags & NSEventModifierFlagCommand) != 0;
             BOOL shift = (event.modifierFlags & NSEventModifierFlagShift) != 0;
             BOOL control = (event.modifierFlags & NSEventModifierFlagControl) != 0;
             BOOL alt = (event.modifierFlags & NSEventModifierFlagOption) != 0;
             NSString *key = event.charactersIgnoringModifiers.lowercaseString;
             NSString *action = nil;
-            if (cmd && [@[@"l", @"t", @"w", @"r", @"d", @"y", @"1", @"2", @"3", @"4", @"5", @"6", @"7", @"8", @"9"] containsObject:key]) action = key;
+            if (cmd && shift && [key isEqual:@"t"]) action = @"reopen";
+            else if (cmd && [@[@"l", @"t", @"w", @"r", @"d", @"y", @"1", @"2", @"3", @"4", @"5", @"6", @"7", @"8", @"9"] containsObject:key]) action = key;
             else if (cmd && shift && [key isEqual:@"b"]) action = @"bookmarks";
             else if (control && event.keyCode == 48) action = shift ? @"previousTab" : @"nextTab";
             else if (alt && event.keyCode == 123) action = @"back";
@@ -221,18 +251,59 @@ JNIEXPORT void JNICALL JNI(frame)(JNIEnv *env, jclass cls, jlong identifier, jdo
         FluxPage *p = pages[@(identifier)]; if (!p || p.disposed) return;
         NSView *container = p.owner.contentView;
         CGFloat top = container.isFlipped ? y : container.bounds.size.height - y - h;
-        p.web.frame = NSMakeRect(x, top, MAX(0, w), MAX(0, h)); p.web.hidden = !visible;
-        if (visible && p.focusWhenShown) { p.focusWhenShown = NO; [p.owner makeFirstResponder:p.web]; }
+        p.shown = visible;
+        p.web.frame = NSMakeRect(x, top, MAX(0, w), MAX(0, h)); p.web.hidden = !visible || p.pdf != nil;
+        p.pdf.frame = p.web.frame; p.pdf.hidden = !visible;
+        if (visible && p.pdf && p.positionPdf) {
+            p.positionPdf = NO; [p.pdf layoutDocumentView];
+            PDFPage *first = [p.pdf.document pageAtIndex:0];
+            [p.pdf goToDestination:[[PDFDestination alloc] initWithPage:first atPoint:NSMakePoint(0, NSMaxY([first boundsForBox:kPDFDisplayBoxMediaBox]))]];
+        }
+        if (visible && p.focusWhenShown) { p.focusWhenShown = NO; [p.owner makeFirstResponder:p.pdf ?: p.web]; }
     });
 }
 JNIEXPORT void JNICALL JNI(command)(JNIEnv *env, jclass cls, jlong identifier, jstring name, jstring value) {
     NSString *op = string(env, name), *argument = string(env, value);
     dispatch_async(dispatch_get_main_queue(), ^{
         FluxPage *p = pages[@(identifier)]; if (!p || p.disposed) return;
-        if ([op isEqual:@"load"]) {
+        if ([op isEqual:@"pdfOpen"]) {
+            NSUInteger version = ++p.documentVersion;
+            [p.web stopLoading];
+            // File parsing runs outside the UI thread; only PDFView creation/attachment is on AppKit.
+            dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0), ^{
+                PDFDocument *doc = [[PDFDocument alloc] initWithURL:[NSURL fileURLWithPath:argument]];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if (p.disposed || version != p.documentVersion) return;
+                    if (!doc) { emit(identifier,@"error",@"Could not open PDF",0,0); return; }
+                    [p.pdf removeFromSuperview];
+                    p.pdf = [[PDFView alloc] initWithFrame:p.web.frame]; p.pdf.document = doc; p.pdf.delegate = p; p.pdf.autoScales = YES;
+                    p.pdf.displayMode = kPDFDisplaySinglePageContinuous; p.pdfPath = argument; p.positionPdf = YES;
+                    p.web.hidden = YES; p.pdf.hidden = !p.shown;
+                    [p.owner.contentView addSubview:p.pdf positioned:NSWindowAbove relativeTo:nil];
+                    [p.pdf layoutDocumentView]; [p.pdf goToFirstPage:nil];
+                    if (p.shown) [p.owner makeFirstResponder:p.pdf];
+                    emit(identifier,@"document",@"",1,0); [p publish]; emit(identifier,@"finish",@"",0,0);
+                });
+            });
+        } else if ([op isEqual:@"pdfPrevious"]) [p.pdf goToPreviousPage:nil];
+        else if ([op isEqual:@"pdfNext"]) [p.pdf goToNextPage:nil];
+        else if ([op isEqual:@"pdfZoomIn"]) [p.pdf zoomIn:nil];
+        else if ([op isEqual:@"pdfZoomOut"]) [p.pdf zoomOut:nil];
+        else if ([op isEqual:@"download"]) {
+            NSURL *url = [NSURL URLWithString:argument];
+            if ([@[@"https",@"http"] containsObject:url.scheme.lowercaseString]) {
+                [p.web startDownloadUsingRequest:[NSURLRequest requestWithURL:url] completionHandler:^(WKDownload *d) { trackDownload(d,p.owner); }];
+            }
+        } else if ([op isEqual:@"load"]) {
+            p.documentVersion++;
+            [p.pdf removeFromSuperview]; p.pdf.document = nil; p.pdf = nil; p.pdfPath = nil; p.web.hidden = !p.shown;
+            emit(identifier,@"document",@"",0,0);
             NSURL *url = [NSURL URLWithString:argument];
             if (url) p.navigation = [p.web loadRequest:[NSURLRequest requestWithURL:url]];
             else emit(identifier, @"error", @"Invalid address", 0, 0);
+        } else if ([op isEqual:@"testForeground"]) {
+            [NSApp activateIgnoringOtherApps:YES];
+            [p.owner makeKeyAndOrderFront:nil]; [p.owner makeFirstResponder:p.web];
         } else if ([op isEqual:@"testKey"]) {
             [p.owner makeKeyAndOrderFront:nil]; [p.owner makeFirstResponder:p.web];
             NSEvent *key = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint
@@ -242,17 +313,17 @@ JNIEXPORT void JNICALL JNI(command)(JNIEnv *env, jclass cls, jlong identifier, j
             [NSApp postEvent:key atStart:NO];
         } else if ([op isEqual:@"back"]) p.navigation = [p.web goBack];
         else if ([op isEqual:@"forward"]) p.navigation = [p.web goForward];
-        else if ([op isEqual:@"reload"]) p.navigation = [p.web reload];
-        else if ([op isEqual:@"stop"]) { p.stoppedNavigation = p.navigation; [p.web stopLoading]; p.navigation = nil; }
+        else if ([op isEqual:@"reload"]) { if (p.pdf) { [p publish]; emit(identifier,@"finish",@"",0,0); } else p.navigation = [p.web reload]; }
+        else if ([op isEqual:@"stop"]) { p.documentVersion++; p.stoppedNavigation = p.navigation; [p.web stopLoading]; p.navigation = nil; }
         else if ([op isEqual:@"zoom"]) p.web.pageZoom = argument.doubleValue;
-        else if ([op isEqual:@"focus"]) { p.focusWhenShown = p.web.hidden; if (!p.web.hidden) [p.owner makeFirstResponder:p.web]; }
+        else if ([op isEqual:@"focus"]) { NSView *v = p.pdf ?: p.web; p.focusWhenShown = v.hidden; if (!v.hidden) [p.owner makeFirstResponder:v]; }
         else if ([op isEqual:@"blur"]) {
             p.focusWhenShown = NO;
-            if ([p.owner.firstResponder isKindOfClass:NSView.class] && [(NSView *)p.owner.firstResponder isDescendantOf:p.web])
+            if ([p.owner.firstResponder isKindOfClass:NSView.class] && ([(NSView *)p.owner.firstResponder isDescendantOf:p.web] || (p.pdf && [(NSView *)p.owner.firstResponder isDescendantOf:p.pdf])))
                 [p.owner makeFirstResponder:p.glass];
         } else if ([op isEqual:@"hide"]) {
-            p.web.hidden = YES; p.focusWhenShown = NO;
-            if ([p.owner.firstResponder isKindOfClass:NSView.class] && [(NSView *)p.owner.firstResponder isDescendantOf:p.web])
+            p.shown = NO; p.web.hidden = YES; p.pdf.hidden = YES; p.focusWhenShown = NO;
+            if ([p.owner.firstResponder isKindOfClass:NSView.class] && ([(NSView *)p.owner.firstResponder isDescendantOf:p.web] || (p.pdf && [(NSView *)p.owner.firstResponder isDescendantOf:p.pdf])))
                 [p.owner makeFirstResponder:p.glass];
         }
     });
@@ -285,6 +356,15 @@ JNIEXPORT void JNICALL JNI(snapshot)(JNIEnv *env, jclass cls, jlong identifier, 
     dispatch_async(dispatch_get_main_queue(), ^{
         FluxPage *p = pages[@(identifier)];
         if (!p || p.disposed) { emit(identifier, @"scriptError", @"Tab closed", token, 0); return; }
+        if (p.pdf) {
+            // PDFKit tiles are compositor-backed and cacheDisplay omits their content.
+            // Export the current PDF page through PDFKit's supported rasterization API.
+            CGFloat scale = p.owner.backingScaleFactor;
+            NSImage *pageImage = [p.pdf.currentPage thumbnailOfSize:NSMakeSize(p.pdf.bounds.size.width*scale,p.pdf.bounds.size.height*scale) forBox:kPDFDisplayBoxMediaBox];
+            NSBitmapImageRep *bitmap = pageImage ? [NSBitmapImageRep imageRepWithData:pageImage.TIFFRepresentation] : nil;
+            BOOL saved = [[bitmap representationUsingType:NSBitmapImageFileTypePNG properties:@{}] writeToFile:path atomically:YES];
+            emit(identifier,saved ? @"script" : @"scriptError",saved ? path : @"Snapshot unavailable",token,0); return;
+        }
         [p.web takeSnapshotWithConfiguration:nil completionHandler:^(NSImage *image, NSError *error) {
             if (p.disposed) return;
             NSBitmapImageRep *bitmap = image ? [NSBitmapImageRep imageRepWithData:image.TIFFRepresentation] : nil;
@@ -294,4 +374,81 @@ JNIEXPORT void JNICALL JNI(snapshot)(JNIEnv *env, jclass cls, jlong identifier, 
             emit(identifier, saved ? @"script" : @"scriptError", saved ? path : (error.localizedDescription ?: writeError.localizedDescription ?: @"Snapshot unavailable"), token, 0);
         }];
     });
+}
+
+JNIEXPORT void JNICALL JNI(configureServices)(JNIEnv *env, jclass cls, jlong token, jstring rules, jboolean https, jboolean phishing) {
+    NSString *source = string(env,rules);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        secureHosts = https; phishingWarnings = phishing;
+        NSUInteger version = ++rulesVersion; rulesLoading = YES;
+        void (^apply)(WKContentRuleList *,NSError *) = ^(WKContentRuleList *list,NSError *error) {
+            if (version != rulesVersion) { emit(0,@"service",@"Superseded",token,0); return; }
+            if (!error) {
+                blockingRules = list;
+                for (FluxPage *p in pages.allValues) {
+                    [p.web.configuration.userContentController removeAllContentRuleLists];
+                    if (list) [p.web.configuration.userContentController addContentRuleList:list];
+                }
+            }
+            rulesLoading = NO;
+            NSArray *waiting = pendingLoads.copy; [pendingLoads removeAllObjects];
+            for (void (^resume)(void) in waiting) resume();
+            emit(0,error ? @"serviceError" : @"service",error ? @"WebKit could not compile the blocking rules" : @"Applied",token,0);
+        };
+        if (source.length == 0) apply(nil,nil);
+        else [[WKContentRuleListStore defaultStore] compileContentRuleListForIdentifier:@"FluxDomains" encodedContentRuleList:source completionHandler:apply];
+    });
+}
+JNIEXPORT void JNICALL JNI(serviceAction)(JNIEnv *env, jclass cls, jlong identifier, jstring operation) {
+    NSString *op = string(env,operation);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        FluxDownload *d = downloads[@(identifier)];
+        if ([op isEqual:@"cancel"]) { [d cancel]; }
+        else if ([op isEqual:@"reveal"] && [d.status isEqual:@"Complete"]) [[NSWorkspace sharedWorkspace] activateFileViewerSelectingURLs:@[[NSURL fileURLWithPath:d.path]]];
+        else if ([op isEqual:@"shutdown"]) {
+            for (FluxDownload *item in downloads.allValues) { [item cancel]; item.download.delegate = nil; if (item.temporaryPath) [NSFileManager.defaultManager removeItemAtPath:item.temporaryPath error:nil]; }
+            [downloads removeAllObjects];
+        }
+    });
+}
+JNIEXPORT void JNICALL JNI(credential)(JNIEnv *env, jclass cls, jlong identifier, jlong token, jstring operation, jstring origin, jstring username, jcharArray password) {
+    NSString *op = string(env,operation), *site = string(env,origin), *user = string(env,username);
+    jsize count = (*env)->GetArrayLength(env,password);
+    jchar *chars = (*env)->GetCharArrayElements(env,password,NULL);
+    NSString *secret = [[NSString alloc] initWithCharacters:(const unichar *)chars length:count];
+    (*env)->ReleaseCharArrayElements(env,password,chars,JNI_ABORT);
+    static dispatch_queue_t keychainQueue;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ keychainQueue = dispatch_queue_create("com.flux.browser.keychain",DISPATCH_QUEUE_SERIAL); });
+    dispatch_async(keychainQueue, ^{
+        @autoreleasepool {
+            NSDictionary *query = @{(__bridge id)kSecClass:(__bridge id)kSecClassGenericPassword,
+                (__bridge id)kSecAttrService:@"com.flux.browser.passwords",
+                (__bridge id)kSecAttrAccount:[NSString stringWithFormat:@"%@\n%@",site,user]};
+            OSStatus status = errSecParam; NSString *result = @"";
+            if ([op isEqual:@"save"]) {
+                NSData *data = [secret dataUsingEncoding:NSUTF8StringEncoding];
+                status = SecItemUpdate((__bridge CFDictionaryRef)query,(__bridge CFDictionaryRef)@{(__bridge id)kSecValueData:data});
+                if (status == errSecItemNotFound) {
+                    NSMutableDictionary *item = query.mutableCopy;
+                    item[(__bridge id)kSecValueData] = data;
+                    item[(__bridge id)kSecAttrLabel] = [NSString stringWithFormat:@"Flux · %@ · %@",site,user];
+                    item[(__bridge id)kSecAttrAccessible] = (__bridge id)kSecAttrAccessibleWhenUnlockedThisDeviceOnly;
+                    status = SecItemAdd((__bridge CFDictionaryRef)item,NULL);
+                }
+            } else if ([op isEqual:@"get"]) {
+                NSMutableDictionary *request = query.mutableCopy;
+                request[(__bridge id)kSecReturnData] = @YES; request[(__bridge id)kSecMatchLimit] = (__bridge id)kSecMatchLimitOne;
+                CFTypeRef data = NULL; status = SecItemCopyMatching((__bridge CFDictionaryRef)request,&data);
+                if (status == errSecSuccess) result = [[NSString alloc] initWithData:CFBridgingRelease(data) encoding:NSUTF8StringEncoding] ?: @"";
+            } else if ([op isEqual:@"delete"]) status = SecItemDelete((__bridge CFDictionaryRef)query);
+            NSString *message = status == errSecItemNotFound ? @"No Flux login found for this origin and username." : @"Keychain action failed or was cancelled. Unlock Keychain and retry.";
+            dispatch_async(dispatch_get_main_queue(), ^{ emit(identifier,status == errSecSuccess ? @"script" : @"scriptError",status == errSecSuccess ? result : message,token,0); });
+        }
+    });
+}
+
+JNIEXPORT void JNICALL JNI(testDownloadPath)(JNIEnv *env, jclass cls, jstring path) {
+    NSString *destination = string(env,path);
+    dispatch_async(dispatch_get_main_queue(), ^{ testDestination = destination; });
 }
