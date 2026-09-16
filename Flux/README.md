@@ -1,6 +1,6 @@
 # Flux Browser
 
-A Java 21+ desktop browser with an Opera GX-inspired carbon/magenta/cyan interface, JavaFX WebKit rendering, and asynchronous PostgreSQL storage. Every application-authored visual component is defined in FXML with its own controller.
+A Java 21+ desktop browser with an Opera GX-inspired carbon/magenta/cyan interface, native macOS WebKit rendering (JavaFX WebView on other platforms), and asynchronous PostgreSQL storage. The JavaFX interface and native-page viewport are defined in FXML with dedicated controllers; WebKit supplies webpage rendering and native page dialogs.
 
 ![Flux Speed Dial running in JavaFX](docs/images/flux-speed-dial.png)
 
@@ -18,7 +18,7 @@ The complete [pom.xml](pom.xml) targets Java 21 and configures:
 | --- | --- | --- |
 | `javafx-controls` | 21.0.12 | Controls, layouts, CSS, and input |
 | `javafx-fxml` | 21.0.12 | FXML loading and controller injection |
-| `javafx-web` | 21.0.12 | WebView, WebEngine, WebHistory, and WebKit |
+| `javafx-web` | 21.0.12 | Compatibility engine on non-macOS or `-Dflux.engine=javafx` |
 | `postgresql` | 42.7.13 | JDBC storage |
 | `javafx-maven-plugin` | 0.0.8 | `mvn javafx:run`, including native JavaFX dependencies |
 
@@ -26,7 +26,11 @@ JavaFX transitively supplies its base, graphics, and media modules. Maven select
 
 On JDK 24 and later, the automatically activated `modern-jdk` Maven profile selects **JavaFX 26.0.2**, including its JavaScript bridge module. JavaFX 21.0.12 remains the default for JDK 21–23. Application source still targets Java 21. This avoids relying on the JavaScript bridge that newer JDKs no longer supply; see the [JavaFX 24 module change](https://openjfx.io/highlights/24/) and [JavaFX 26 runtime requirements](https://openjfx.io/highlights/26/).
 
-The launch configuration uses JavaFX's built-in software renderer for consistent demonstrations; the local macOS GPU path produced texture-allocation errors during verification. Rendering uses more CPU, while avoiding that GPU failure. To opt into hardware rendering on a machine where it is stable, use `mvn -Dflux.rendering=d3d,es2,sw javafx:run` (Windows prefers D3D; macOS/Linux can use ES2, with software fallback).
+On macOS, Flux now uses **WKWebView**, the system WebKit engine, inside the JavaFX window. This replaces JavaFX WebView for everyday browsing on your M3. WebKit manages its web-content/network/GPU processes; page JavaScript and video no longer render through JavaFX's WebView pipeline. Native calls enqueue asynchronously in AppKit and JavaFX; neither path waits for page-script execution. The bridge builds automatically using **Xcode Command Line Tools** (`xcode-select --install` if missing), supports macOS 12+, and packages the library for the running JDK's architecture. Use `mvn javafx:run` as before. To open a page at launch: `mvn javafx:run -Djavafx.args="--url=https://github.com/"`. System WebKit updates come with macOS.
+
+JavaFX uses Metal for the **shell** on macOS with JDK 24+, with ES2/software fallbacks. On older JDKs the shell uses software rendering. This setting does not control WKWebView's compositor. The earlier software-default choice came from a synthetic JavaFX WebView test; subsequent media/site tests exposed its limits and prompted the native-engine replacement. To compare the old engine explicitly: `mvn -Dflux.engine=javafx javafx:run`. See [VERIFICATION.md](docs/VERIFICATION.md) for measurements and limitations.
+
+The default maximum Java heap is **1 GiB (`1024m`)**, leaving room on an 8 GB Mac for macOS, PostgreSQL, and other applications. This is a Java heap limit, **not a cap on total browser memory**: WebKit documents, native media, and graphics buffers also consume memory. Override it when needed with `mvn -Dflux.maxHeap=1536m javafx:run`. Use an Apple Silicon JDK on the M3 so Maven selects arm64 JavaFX libraries.
 
 Versions were checked against the [OpenJFX release notes](https://gluonhq.com/products/javafx/openjfx-21-release-notes/) and [pgJDBC downloads](https://jdbc.postgresql.org/download/). See [OpenJFX's Maven instructions](https://openjfx.io/openjfx-docs/#maven) for platform setup.
 
@@ -73,7 +77,9 @@ psql -h localhost -U flux -d flux --single-transaction -v ON_ERROR_STOP=1 -f dat
 
 [schema.sql](database/schema.sql) creates `history`, `bookmarks`, and `speed_dial`, with identity IDs, timestamp indexes, timezone-aware dates, unique saved URLs, bookmark folders, and initial Speed Dial sites. The brief's `quick_dial` and `speed_dial` names represent the same feature; this implementation uses **`speed_dial`**. Seeds are inserted only when creating the table, so deleting a starter tile is permanent.
 
-[DatabaseManager.java](src/main/java/com/flux/browser/db/DatabaseManager.java) owns the connection factory, schema transaction, timeouts, and one ordered JDBC executor. [HistoryDAO.java](src/main/java/com/flux/browser/db/HistoryDAO.java), [BookmarkDAO.java](src/main/java/com/flux/browser/db/BookmarkDAO.java), and [SpeedDialDAO.java](src/main/java/com/flux/browser/db/SpeedDialDAO.java) expose asynchronous prepared-statement operations. All results are consumed off the JavaFX thread; controllers apply results with `Platform.runLater`.
+[DatabaseManager.java](src/main/java/com/flux/browser/db/DatabaseManager.java) owns the connection factory, schema transaction, timeouts, **two JDBC readers and one ordered writer**. The reader and writer executors each have a 64-task queue; idle threads retire after 30 seconds. Queue saturation fails the operation through its future instead of running SQL on JavaFX or growing memory without a bound. [HistoryDAO.java](src/main/java/com/flux/browser/db/HistoryDAO.java), [BookmarkDAO.java](src/main/java/com/flux/browser/db/BookmarkDAO.java), and [SpeedDialDAO.java](src/main/java/com/flux/browser/db/SpeedDialDAO.java) expose asynchronous prepared-statement operations. Connections, statements, and result iteration stay off the JavaFX thread; controllers apply results with `Platform.runLater`.
+
+Reads can run alongside writes and see the last committed database state. Controllers refresh saved data after the write future completes; calling a read immediately after submitting a write does not itself guarantee that write has committed. Writes retain submission order, including a history clear behind already accepted visits. Each operation owns and closes its connection.
 
 History stores successful HTTP(S) loads, including reload and Back/Forward visits. Home, tab switching, failed/cancelled loads, and title-only changes do not add visits. Clearing history preserves bookmarks and shortcuts. Library searches show up to 500 matching records; narrow the search to find older entries. Title and URL lengths are bounded to match the database schema.
 
@@ -83,13 +89,15 @@ If PostgreSQL is unavailable, Flux still opens and browses. The footer reports *
 
 The complete UI lives in [src/main/resources/com/flux/browser/view](src/main/resources/com/flux/browser/view), with the shared [style.css](src/main/resources/com/flux/browser/style.css). The UI uses the specified carbon palette with magenta/cyan accents, SVGPath artwork, a thin sidebar, custom tab chips, and native FXML home/library/settings screens.
 
-The extensive [Scene Builder guide](docs/UI_SCENEBUILDER_GUIDE.md) documents every FXML file, its controller, injected fields, action handlers, runtime bindings, and safe live-demo edits. Dynamic rows and tiles also have standalone FXML templates.
+The extensive [Scene Builder guide](docs/UI_SCENEBUILDER_GUIDE.md) documents all 13 FXML/controller pairs, injected fields, action handlers, runtime bindings, and safe live-demo edits. Dynamic rows and tiles also have standalone FXML templates.
 
 ## 5. Controller and engine wiring
 
-[BrowserController.java](src/main/java/com/flux/browser/controller/BrowserController.java) manages the shell, selected tab, omnibox, keyboard shortcuts, bookmarks, panels, and window actions. [WebTabController.java](src/main/java/com/flux/browser/controller/WebTabController.java) owns one WebView, follows WebEngine load/title/location events, routes popup windows to tabs, and records successful visits.
+[BrowserController.java](src/main/java/com/flux/browser/controller/BrowserController.java) manages the shell and coalesces page-event bursts into one toolbar update per FX pulse. [WebTabController.java](src/main/java/com/flux/browser/controller/WebTabController.java) owns an engine-neutral `BrowserPage`. First navigation creates `NativeWebPage` with `NativeWebContent.fxml` on macOS, or `JavaFxPage` with `WebContent.fxml` elsewhere. Blank Speed Dial tabs allocate no browser engine.
 
-Home is native FXML within each tab. It retains the last webpage so Back from Home can return to it. History, Bookmarks, and Settings temporarily cover the selected tab. Switching tabs preserves each page and its session history. Closing the last tab opens a new Speed Dial. Closing the window drains accepted database operations without blocking the JavaFX thread.
+Home retains the last page for Back and pauses its media. Switching tabs or opening library/settings hides the native viewport while retaining the document. Closing a tab releases its WKWebView, observers, pending script requests, and input handlers. Native popups preserve their WebKit configuration and opener; navigation, title, progress, zoom, file selection, JavaScript dialogs, and shell keyboard shortcuts are bridged. TLS certificate validation remains the system default. On macOS 14+, a stable Flux-specific website data store shares cookies/cache across Flux tabs and restarts, independently of PostgreSQL. Older macOS uses WebKit's default persistent store. Existing JavaFX-engine cookies are not migrated.
+
+The Java heap limit is separate from WebKit helper-process memory. WebKit decides process allocation; Flux does not launch one arbitrary worker per CPU or promise one process per tab. Loaded background tabs retain forms and navigation, and WebKit controls throttling. There is no automatic tab eviction. The JavaFX compatibility engine must still be accessed on the FX Application Thread.
 
 | Action | Shortcut |
 | --- | --- |
@@ -127,17 +135,19 @@ mvn -Pdatabase-check,ui-check verify
 
 The `flux` role needs `CREATEDB` permission for that `createdb` command; alternatively ask your administrator to create `flux_test` owned by `flux`. Test helpers require the password through the environment, not the application configuration file. Run this in a separate shell so normal launches continue to use your `flux` database.
 
-The database checks exercise real CRUD, ordering, literal search, committed persistence, repeat schema initialization, seed deletion, and a failed connection. The UI checks open a real JavaFX window, serve local test pages, drive controls, and save app-only screenshots to `target/screenshots`. Set `FLUX_CHECK_WEB=true` to add a live HTTPS check against `example.org`. To test offline browsing separately:
+The database checks exercise real CRUD, ordering, literal search, committed persistence, repeat schema initialization, seed deletion, and a failed connection. The UI checks open a real JavaFX window, serve local test pages, drive controls, and save JavaFX shell screenshots and separate native page snapshots to `target/screenshots`. Set `FLUX_CHECK_WEB=true` to add a live HTTPS check against `example.org`. To test offline browsing separately:
 
 ```sh
 FLUX_DB_URL=jdbc:postgresql://127.0.0.1:1/flux_test FLUX_EXPECT_STORAGE=false mvn -Pui-check verify
 ```
 
+The optional legacy-engine `mvn -Pperformance-check verify` opens a local animated-page workload, creates blank tabs, switches tabs, and resizes the window. It reports JavaFX pulse gaps and event-queue/command timings; these are repeatable diagnostics, not a promise of website frame rate. See [VERIFICATION.md](docs/VERIFICATION.md) for measured results and their limits.
+
 For the five-minute demo, follow [PRESENTATION.md](docs/PRESENTATION.md). Recorded verification results are in [VERIFICATION.md](docs/VERIFICATION.md).
 
 ### Practical limits
 
-JavaFX WebView is WebKit, with a different feature set from a full Chromium browser. Some video codecs, DRM media, complex sign-in pages, and modern web APIs may not work. There is no download manager, PDF viewer, extension engine, password vault, ad blocker, browser synchronization, or private-browsing mode. WebEngine's native error page distinguishes transport/load failures; HTTP error responses that render an HTML page can still count as successful loads. These are deliberate MVP boundaries from the brief.
+Native WKWebView supports substantially more web/media APIs than JavaFX WebView, but site login policies, DRM, network conditions, and codec availability can still affect compatibility. There is no download manager, extension engine, password vault, ad blocker, synchronization, or private-browsing mode. HTTP error pages can count as completed navigation. The native bridge uses two JavaFX internal exports to obtain the owning macOS window handle; Maven configures them, and JavaFX upgrades require the UI checks.
 
 ### Troubleshooting
 

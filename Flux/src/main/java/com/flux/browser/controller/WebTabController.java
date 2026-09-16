@@ -2,23 +2,24 @@ package com.flux.browser.controller;
 
 import com.flux.browser.db.HistoryDAO;
 import com.flux.browser.db.SpeedDialDAO;
-import com.flux.browser.util.Dialogs;
 import com.flux.browser.util.UrlResolver;
 import javafx.beans.property.*;
-import javafx.collections.ListChangeListener;
+import com.flux.browser.web.BrowserPage;
+import com.flux.browser.web.JavaFxPage;
+import com.flux.browser.web.NativeWebPage;
 import javafx.concurrent.Worker;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebHistory;
-import javafx.scene.web.WebView;
+import javafx.scene.layout.StackPane;
 
-/** Owns one WebView and its page lifecycle. WebEngine is only touched on the FX thread. */
+
+/** Owns one lazily allocated browser page and its FX-thread lifecycle. */
 public final class WebTabController {
-    @FXML private WebView webView;
+    @FXML private StackPane root;
+    private BrowserPage page;
     @FXML private Parent speedDial;
     @FXML private SpeedDialController speedDialController;
     @FXML private VBox errorPane;
@@ -31,41 +32,43 @@ public final class WebTabController {
     private boolean atHome = true;
     private boolean homeReturnError;
     private boolean disposed;
+    private boolean active;
+    private double zoom = 1;
     private String status = "Ready to explore";
     private String attemptedUrl = "";
 
-    @FXML private void initialize() {
-        WebEngine engine = engine();
-        engine.getHistory().setMaxSize(100);
-        engine.locationProperty().addListener((observable, before, after) -> {
-            if (disposed) return;
-            if (!atHome) {
-                location.set(after == null ? "" : after);
+    private void initializePage(BrowserPage content) {
+        page = content;
+        root.getProperties().put("browserPage", page);
+        root.getChildren().add(0, page.view());
+        page.zoom(zoom);
+        page.location.addListener((o, before, after) -> {
+            if (disposed || atHome) return;
+            if (after != null && !after.isBlank()) {
+                location.set(after);
                 if (UrlResolver.isWeb(after)) attemptedUrl = after;
             }
             changed();
         });
-        engine.titleProperty().addListener((observable, before, after) -> {
-            if (!disposed && !atHome) { resolveTitle(); changed(); }
-        });
-        engine.getLoadWorker().progressProperty().addListener((observable, before, after) -> changed());
-        engine.getLoadWorker().stateProperty().addListener((observable, before, state) -> loadState(state));
-        engine.getHistory().currentIndexProperty().addListener((observable, before, after) -> changed());
-        engine.getHistory().getEntries().addListener((ListChangeListener<WebHistory.Entry>) change -> changed());
-        engine.setOnStatusChanged(event -> {
-            if (!disposed) { status = event.getData() == null || event.getData().isBlank() ? "Ready" : event.getData(); changed(); }
-        });
+        page.title.addListener(o -> { if (!disposed && !atHome) { resolveTitle(); changed(); } });
+        page.progress.addListener(o -> changed());
+        page.state.addListener((o, before, after) -> loadState(after));
+        page.back.addListener(o -> changed()); page.forward.addListener(o -> changed());
+        page.popup = browser::newPopupTab;
+        page.closeRequested = () -> browser.closeTab(this);
+        page.shortcut = browser::nativeShortcut;
+        updatePageVisibility();
+    }
+
+    public void adopt(BrowserPage content) {
+        atHome = false; visible(speedDial, false); initializePage(content);
+        loadState(content.state.get());
     }
 
     public void configure(BrowserController browser, HistoryDAO history, SpeedDialDAO dials) {
         this.browser = browser;
         this.history = history;
         speedDialController.configure(browser, dials);
-        engine().setCreatePopupHandler(features -> browser.newPopupTab());
-        engine().setOnAlert(event -> Dialogs.alert(browser.window(), "Message from " + UrlResolver.host(engine().getLocation()), event.getData()));
-        engine().setConfirmHandler(message -> Dialogs.confirm(browser.window(), "Confirm · " + UrlResolver.host(engine().getLocation()), message));
-        engine().setPromptHandler(prompt -> Dialogs.prompt(browser.window(), "Prompt · " + UrlResolver.host(engine().getLocation()), prompt.getMessage(), prompt.getDefaultValue()));
-        engine().setOnVisibilityChanged(event -> { if (!event.getData() && !disposed) browser.closeTab(this); });
     }
 
     private void loadState(Worker.State state) {
@@ -73,12 +76,14 @@ public final class WebTabController {
         loading.set(state == Worker.State.SCHEDULED || state == Worker.State.RUNNING);
         if (state == Worker.State.SCHEDULED) {
             atHome = false;
-            visible(speedDial, false); visible(webView, true); visible(errorPane, false);
+            updateHomeActivity();
+            visible(speedDial, false); visible(errorPane, false); updatePageVisibility();
             title.set("Loading…");
             status = "Loading page…";
         } else if (state == Worker.State.SUCCEEDED && !atHome) {
-            location.set(engine().getLocation());
+            location.set(page.location.get());
             resolveTitle();
+            lastSuccessfulUrl = location.get();
             status = "Page loaded";
             if (history != null && UrlResolver.isWeb(location.get())) {
                 try {
@@ -91,7 +96,7 @@ public final class WebTabController {
             title.set("Page unavailable");
             errorUrl.setText(attemptedUrl);
             errorMessage.setText("Check the address and your internet connection, then try again. Some websites require features this browser does not support.");
-            visible(webView, false); visible(errorPane, true);
+            page.visible(false); visible(errorPane, true);
             status = "Unable to load this page";
         } else if (state == Worker.State.CANCELLED && !atHome) {
             resolveTitle();
@@ -101,8 +106,8 @@ public final class WebTabController {
     }
 
     private void resolveTitle() {
-        String url = engine().getLocation();
-        title.set(url == null || url.isBlank() || url.equals("about:blank") ? "New tab" : UrlResolver.pageTitle(engine().getTitle(), url));
+        String url = page.location.get();
+        title.set(url == null || url.isBlank() || url.equals("about:blank") ? "New tab" : UrlResolver.pageTitle(page.title.get(), url));
     }
 
     public void load(String address) {
@@ -110,10 +115,12 @@ public final class WebTabController {
         if (UrlResolver.HOME.equals(address)) { home(); return; }
         attemptedUrl = address;
         atHome = false;
+        updateHomeActivity();
         location.set(address);
-        visible(speedDial, false); visible(errorPane, false); visible(webView, true);
-        engine().load(address);
-        webView.requestFocus();
+        BrowserPage engine = page();
+        visible(speedDial, false); visible(errorPane, false); updatePageVisibility();
+        engine.load(address);
+        page.focus();
         changed();
     }
 
@@ -121,15 +128,13 @@ public final class WebTabController {
         if (disposed) return;
         if (!atHome) homeReturnError = errorPane.isVisible();
         atHome = true;
-        engine().getLoadWorker().cancel();
-        // Stop hidden media while retaining the document and WebHistory for Back from Home.
-        if (engine().getDocument() != null) {
-            try { engine().executeScript("document.querySelectorAll('video,audio').forEach(function(m){m.pause();})"); }
-            catch (RuntimeException ignored) { /* A navigating document may already have been released. */ }
-        }
+        if (page != null) page.stop();
+        // Retain history but pause media when explicitly returning Home.
+        if (page != null) page.evaluate("document.querySelectorAll('video,audio').forEach(m=>m.pause()); true");
         loading.set(false); title.set("Speed Dial"); location.set(UrlResolver.HOME); status = "Ready to explore";
-        visible(webView, false); visible(errorPane, false); visible(speedDial, true);
-        speedDialController.refresh();
+        if (page != null) page.visible(false);
+        visible(errorPane, false); visible(speedDial, true);
+        updateHomeActivity();
         changed();
     }
 
@@ -137,37 +142,43 @@ public final class WebTabController {
         if (!canGoBack()) return;
         if (atHome) {
             atHome = false;
-            visible(speedDial, false); visible(webView, !homeReturnError); visible(errorPane, homeReturnError);
-            location.set(engine().getLocation());
+            updateHomeActivity();
+            visible(speedDial, false); visible(errorPane, homeReturnError); updatePageVisibility();
+            location.set(page.location.get());
             if (homeReturnError) { title.set("Page unavailable"); status = "Unable to load this page"; }
             else resolveTitle();
             changed();
-        } else engine().getHistory().go(failedOutsideHistory() ? 0 : -1);
+        } else { if (failedOutsideHistory()) page.load(lastSuccessfulUrl); else page.back(); }
     }
 
-    public void forward() { if (canGoForward()) engine().getHistory().go(1); }
-    public void reload() { if (atHome) speedDialController.refresh(); else if (errorPane.isVisible()) retry(); else engine().reload(); }
-    public void stop() { engine().getLoadWorker().cancel(); }
+    public void forward() { if (canGoForward()) page.forward(); }
+    public void reload() { if (atHome) speedDialController.refresh(); else if (errorPane.isVisible()) retry(); else page.reload(); }
+    public void stop() { if (page != null) page.stop(); }
     @FXML private void retry() { if (!attemptedUrl.isBlank()) load(attemptedUrl); }
 
+    private String lastSuccessfulUrl = "";
     private boolean failedOutsideHistory() {
-        WebHistory webHistory = engine().getHistory();
-        return errorPane.isVisible() && !webHistory.getEntries().isEmpty()
-                && !webHistory.getEntries().get(webHistory.getCurrentIndex()).getUrl().equals(engine().getLocation());
+        return errorPane.isVisible() && !lastSuccessfulUrl.isBlank() && !lastSuccessfulUrl.equals(attemptedUrl);
     }
-
-    public boolean canGoBack() { return atHome ? UrlResolver.isWeb(engine().getLocation()) : failedOutsideHistory() || engine().getHistory().getCurrentIndex() > 0; }
-    public boolean canGoForward() { return !atHome && engine().getHistory().getCurrentIndex() < engine().getHistory().getEntries().size() - 1; }
+    public boolean canGoBack() { return page != null && (atHome ? !attemptedUrl.isBlank() : failedOutsideHistory() || page.back.get()); }
+    public boolean canGoForward() { return page != null && !atHome && page.forward.get(); }
     public boolean isHome() { return atHome; }
-    public WebEngine engine() { return webView.getEngine(); }
+    public BrowserPage page() {
+        if (disposed) throw new IllegalStateException("Tab is closed");
+        if (page == null) initializePage(NativeWebPage.enabled() ? new NativeWebPage(browser.window()) : new JavaFxPage(browser.window()));
+        return page;
+    }
     public ReadOnlyStringProperty titleProperty() { return title.getReadOnlyProperty(); }
     public ReadOnlyStringProperty locationProperty() { return location.getReadOnlyProperty(); }
     public ReadOnlyBooleanProperty loadingProperty() { return loading.getReadOnlyProperty(); }
-    public double progress() { return loading.get() ? engine().getLoadWorker().getProgress() : 0; }
+    public double progress() { return loading.get() ? page.progress.get() : 0; }
     public String status() { return status; }
-    public double zoom() { return webView.getZoom(); }
-    public void zoom(double value) { webView.setZoom(Math.clamp(value, 0.75, 1.5)); }
-    public void focus() { if (!atHome) webView.requestFocus(); }
+    public double zoom() { return zoom; }
+    public void zoom(double value) { zoom = Math.clamp(value, 0.75, 1.5); if (page != null) page.zoom(zoom); }
+    public void focus() { if (!atHome && page != null) page.focus(); }
+    public void setActive(boolean active) { this.active = active; updateHomeActivity(); updatePageVisibility(); }
+    private void updateHomeActivity() { speedDialController.setActive(active && atHome && !disposed); }
+    private void updatePageVisibility() { if (page != null) page.visible(active && !atHome && !errorPane.isVisible() && !disposed); }
     public void refreshDials() { speedDialController.refresh(); }
     private void changed() { if (!disposed && browser != null) browser.tabChanged(this); }
     private static void visible(Node node, boolean visible) { node.setVisible(visible); node.setManaged(visible); }
@@ -175,9 +186,6 @@ public final class WebTabController {
     public void dispose() {
         disposed = true;
         speedDialController.dispose();
-        engine().setCreatePopupHandler(null); engine().setOnAlert(null); engine().setConfirmHandler(null);
-        engine().setPromptHandler(null); engine().setOnVisibilityChanged(null); engine().setOnStatusChanged(null);
-        engine().getLoadWorker().cancel();
-        engine().load(null);
+        if (page != null) { page.close(); root.getChildren().remove(page.view()); page = null; }
     }
 }

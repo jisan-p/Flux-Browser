@@ -25,6 +25,8 @@ public final class FluxBrowser extends Application {
         stage.setOnCloseRequest(event -> browser.close());
         stage.show();
         browser.focusAddress();
+        String startUrl = getParameters() == null ? null : getParameters().getNamed().get("url");
+        if (startUrl != null && !startUrl.isBlank()) browser.navigateTo(startUrl);
     }
 
     @Override public void stop() { if (browser != null) browser.close(); }

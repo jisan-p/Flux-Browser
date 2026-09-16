@@ -7,6 +7,7 @@ import javafx.scene.control.Button;
 public final class SidebarController {
     @FXML private Button homeButton, bookmarksButton, historyButton, settingsButton;
     private BrowserController browser;
+    private String selectedPage;
     public void configure(BrowserController browser) { this.browser = browser; }
     @FXML private void home() { if (browser != null) browser.home(); }
     @FXML private void bookmarks() { if (browser != null) browser.showLibrary(true); }
@@ -14,6 +15,8 @@ public final class SidebarController {
     @FXML private void settings() { if (browser != null) browser.settings(); }
 
     public void select(String page) {
+        if (page.equals(selectedPage)) return;
+        selectedPage = page;
         for (Button button : List.of(homeButton, bookmarksButton, historyButton, settingsButton)) button.getStyleClass().remove("selected");
         Button selected = switch (page) {
             case "home" -> homeButton;

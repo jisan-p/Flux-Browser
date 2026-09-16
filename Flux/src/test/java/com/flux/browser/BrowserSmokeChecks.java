@@ -22,7 +22,8 @@ import javafx.scene.image.PixelFormat;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
-import javafx.scene.web.WebView;
+import com.flux.browser.web.BrowserPage;
+import com.flux.browser.web.NativeWebPage;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -77,12 +78,17 @@ public final class BrowserSmokeChecks {
             await("storage initialization", () -> !label("databaseStatus").getText().contains("CONNECTING"));
             BrowserChecks.equal(fx(() -> label("databaseStatus").getText().contains("CONNECTED")), expectStorage);
             await("starter dials", () -> root().lookupAll(".dial-tile").size() >= 6);
+            BrowserChecks.check(fx(() -> web() == null), "Fresh home does not allocate WebKit");
+            Node firstTile = fx(() -> activeContent().lookup(".dial-tile"));
+            fire("reloadButton");
+            Thread.sleep(200);
+            BrowserChecks.check(fx(() -> firstTile == activeContent().lookup(".dial-tile")), "Unchanged Speed Dial reuses its tiles");
             screenshot("01-speed-dial");
 
             navigate(base + "/one");
             loaded("Page One");
             BrowserChecks.check(fx(() -> stage.getTitle().contains("Page One")), "tab/window title resolves");
-            fx(() -> { web().getEngine().executeScript("document.getElementById('next').click()"); return null; });
+            script("document.getElementById('next').click(); true");
             loaded("Page Two");
             fire("backButton"); loaded("Page One");
             fire("forwardButton"); loaded("Page Two");
@@ -91,6 +97,14 @@ public final class BrowserSmokeChecks {
             BrowserChecks.check(fx(() -> !button("backButton").isDisabled()), "Back from Home is available");
             fire("backButton"); loaded("Page Two");
             screenshot("02-web-page");
+            if (fx(() -> web() instanceof NativeWebPage)) {
+                BrowserChecks.equal(script("typeof MediaSource !== 'undefined'"), "true");
+                // App-local Cocoa event, avoiding OS-wide key injection/Accessibility permissions.
+                fx(() -> { web().focus(); return null; });
+                Thread.sleep(100);
+                fx(() -> { ((NativeWebPage) web()).postShortcutForTesting("l"); return null; });
+                await("native Cmd+L focuses omnibox", () -> text("addressBar").isFocused());
+            }
 
             if (expectStorage) {
                 await("bookmark action enabled", () -> !button("bookmarkButton").isDisabled());
@@ -139,20 +153,22 @@ public final class BrowserSmokeChecks {
 
             shortcut(KeyCode.T);
             BrowserChecks.equal(fx(BrowserSmokeChecks::tabCount), 2);
+            BrowserChecks.check(fx(() -> web() == null), "New blank tab does not allocate WebKit");
             navigate(base + "/one"); loaded("Page One");
-            fx(() -> { web().getEngine().executeScript("window.open('/popup','_blank')"); return null; });
+            script("window.open('/popup','_blank'); true");
             loaded("Popup Page");
             BrowserChecks.equal(fx(BrowserSmokeChecks::tabCount), 3);
-            shortcut(KeyCode.W); loaded("Page One");
+            BrowserChecks.equal(script("!!window.opener"), "true");
+            script("window.close(); true"); loaded("Page One");
             shortcut(KeyCode.DIGIT1);
-            BrowserChecks.check(fx(() -> text("addressBar").getText().equals("flux://start") || web().getEngine().getLocation().endsWith("/two")), "tab switch keeps independent page state");
+            BrowserChecks.check(fx(() -> text("addressBar").getText().equals("flux://start") || web().location.get().endsWith("/two")), "tab switch keeps independent page state");
             shortcut(KeyCode.DIGIT2); loaded("Page One");
 
             fire("settingsButton");
             fire("cyanButton");
             BrowserChecks.check(fx(() -> root().getStyleClass().contains("cyan-theme")), "accent toggle");
             fx(() -> { ((Slider) root().lookup("#zoomSlider")).setValue(125); return null; });
-            BrowserChecks.equal(fx(() -> web().getZoom()), 1.25);
+            BrowserChecks.equal(fx(() -> web().zoomLevel.get()), 1.25);
             screenshot("05-settings-cyan");
             fire("magentaButton");
             fire("homeButton");
@@ -163,15 +179,15 @@ public final class BrowserSmokeChecks {
             navigate(base + "/slow");
             await("slow page starts", () -> !button("stopButton").isDisabled());
             fire("stopButton");
-            await("cancelled navigation", () -> web().getEngine().getLoadWorker().getState() == Worker.State.CANCELLED);
+            await("cancelled navigation", () -> web().state.get() == Worker.State.CANCELLED);
             int closedPort;
             try (var socket = new java.net.ServerSocket(0)) { closedPort = socket.getLocalPort(); }
             navigate("http://127.0.0.1:" + closedPort + "/unreachable");
-            await("failed page recovery", () -> root().lookup("#errorPane").isVisible());
+            await("failed page recovery", () -> activeContent().lookup("#errorPane").isVisible());
             screenshot("07-load-error");
             fire("homeButton");
             fire("backButton");
-            await("error view retained across Home", () -> root().lookup("#errorPane").isVisible());
+            await("error view retained across Home", () -> activeContent().lookup("#errorPane").isVisible());
             fire("homeButton");
             if (expectStorage) {
                 BrowserChecks.equal(visitCount(base + "/slow"), 0);
@@ -195,18 +211,25 @@ public final class BrowserSmokeChecks {
     }
 
     private static Parent root() { return stage.getScene().getRoot(); }
-    private static Button button(String id) { return (Button) root().lookup("#" + id); }
+    private static Button button(String id) {
+        Node inTab = activeContent().lookup("#" + id);
+        return (Button) (inTab == null ? root().lookup("#" + id) : inTab);
+    }
     private static Label label(String id) { return (Label) root().lookup("#" + id); }
     private static TextField text(String id) { return (TextField) root().lookup("#" + id); }
     private static ListView<?> entries() { return (ListView<?>) root().lookup("#entries"); }
-    private static WebView web() { return (WebView) root().lookup("#webView"); }
+    private static Parent activeContent() {
+        return root().lookupAll(".web-tab").stream().filter(Node::isVisible).map(node -> (Parent) node).findFirst().orElseThrow();
+    }
+    private static BrowserPage web() { return (BrowserPage) activeContent().getProperties().get("browserPage"); }
+    private static String script(String js) throws Exception { return fx(() -> web().evaluate(js)).get(15, TimeUnit.SECONDS); }
     private static int tabCount() { return ((HBox) root().lookup("#tabHeaders")).getChildren().size(); }
     private static Stage dialog() {
         return Window.getWindows().stream().filter(window -> window instanceof Stage && window != stage && window.isShowing())
                 .map(window -> (Stage) window).findFirst().orElse(null);
     }
     private static Parent dial(String name) {
-        return root().lookupAll(".dial-tile").stream().filter(node -> node.lookup("#titleLabel") instanceof Label label && label.getText().equals(name))
+        return activeContent().lookupAll(".dial-tile").stream().filter(node -> node.lookup("#titleLabel") instanceof Label label && label.getText().equals(name))
                 .map(node -> (Parent) node).findFirst().orElse(null);
     }
     private static void fire(String id) throws Exception { fx(() -> { button(id).fire(); return null; }); }
@@ -215,7 +238,7 @@ public final class BrowserSmokeChecks {
         fx(() -> { text("addressBar").setText(url); text("addressBar").fireEvent(new ActionEvent()); return null; });
     }
     private static void loaded(String title) throws Exception {
-        await("load " + title, () -> web().getEngine().getLoadWorker().getState() == Worker.State.SUCCEEDED && title.equals(web().getEngine().getTitle()));
+        await("load " + title, () -> web().state.get() == Worker.State.SUCCEEDED && title.equals(web().title.get()));
     }
     private static int visitCount(String url) throws Exception {
         try (var connection = java.sql.DriverManager.getConnection(System.getenv("FLUX_DB_URL"),
@@ -256,8 +279,8 @@ public final class BrowserSmokeChecks {
             if (fx(condition::getAsBoolean)) return;
             Thread.sleep(100);
         }
-        System.err.println(fx(() -> "UI state: " + web().getEngine().getLoadWorker().getState() + " / "
-                + web().getEngine().getLocation() + " / error panel=" + root().lookup("#errorPane").isVisible()));
+        System.err.println(fx(() -> "UI state: " + (web() == null ? "No WebKit instance" : web().state.get() + " / "
+                + web().location.get()) + " / error panel=" + activeContent().lookup("#errorPane").isVisible()));
         screenshot("failure");
         throw new AssertionError("Timed out: " + description);
     }
@@ -276,5 +299,7 @@ public final class BrowserSmokeChecks {
         Path directory = Path.of("target", "screenshots");
         Files.createDirectories(directory);
         ImageIO.write(image, "png", directory.resolve(name + ".png").toFile());
+        NativeWebPage nativePage = fx(() -> web() instanceof NativeWebPage p && p.view().isVisible() ? p : null);
+        if (nativePage != null) fx(() -> nativePage.snapshot(directory.resolve(name + "-native-page.png"))).get(20, TimeUnit.SECONDS);
     }
 }

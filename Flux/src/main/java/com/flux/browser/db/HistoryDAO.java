@@ -14,7 +14,7 @@ public final class HistoryDAO {
     public CompletableFuture<Long> saveVisit(String title, String url) {
         String address = UrlResolver.webAddress(url);
         String name = UrlResolver.pageTitle(title, address);
-        return database.query(connection -> {
+        return database.write(connection -> {
             try (var statement = connection.prepareStatement("INSERT INTO history (title, url) VALUES (?, ?) RETURNING id")) {
                 statement.setString(1, name);
                 statement.setString(2, address);
@@ -24,7 +24,7 @@ public final class HistoryDAO {
     }
 
     public CompletableFuture<List<HistoryEntry>> getHistory(String filter) {
-        return database.query(connection -> {
+        return database.read(connection -> {
             try (var statement = connection.prepareStatement("""
                     SELECT id, title, url, visit_timestamp FROM history
                     WHERE position(lower(?) in lower(title || ' ' || url)) > 0
@@ -43,7 +43,7 @@ public final class HistoryDAO {
     }
 
     public CompletableFuture<Void> deleteHistory(long id) {
-        return database.query(connection -> {
+        return database.write(connection -> {
             try (var statement = connection.prepareStatement("DELETE FROM history WHERE id = ?")) {
                 statement.setLong(1, id); statement.executeUpdate(); return null;
             }
@@ -51,7 +51,7 @@ public final class HistoryDAO {
     }
 
     public CompletableFuture<Void> deleteHistory() {
-        return database.query(connection -> {
+        return database.write(connection -> {
             try (var statement = connection.prepareStatement("DELETE FROM history")) {
                 statement.executeUpdate(); return null;
             }

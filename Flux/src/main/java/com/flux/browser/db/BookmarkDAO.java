@@ -15,7 +15,7 @@ public final class BookmarkDAO {
     public CompletableFuture<List<Bookmark>> getBookmarks() { return getBookmarks(""); }
 
     public CompletableFuture<List<Bookmark>> getBookmarks(String filter) {
-        return database.query(connection -> {
+        return database.read(connection -> {
             try (var statement = connection.prepareStatement("""
                     SELECT * FROM bookmarks WHERE position(lower(?) in lower(title || ' ' || url || ' ' || category)) > 0
                     ORDER BY created_at DESC, id DESC LIMIT 500
@@ -31,7 +31,7 @@ public final class BookmarkDAO {
     }
 
     public CompletableFuture<Boolean> contains(String url) {
-        return database.query(connection -> {
+        return database.read(connection -> {
             try (var statement = connection.prepareStatement("SELECT 1 FROM bookmarks WHERE url = ?")) {
                 statement.setString(1, url);
                 try (var result = statement.executeQuery()) { return result.next(); }
@@ -44,7 +44,7 @@ public final class BookmarkDAO {
         String address = UrlResolver.webAddress(url);
         String name = UrlResolver.requiredText(title, "Title", 512);
         String folder = UrlResolver.requiredText(category.isBlank() ? "Unsorted" : category, "Folder", 80);
-        return database.query(connection -> {
+        return database.write(connection -> {
             String sql = id == 0 ? """
                     INSERT INTO bookmarks (title, url, category) VALUES (?, ?, ?)
                     ON CONFLICT (url) DO UPDATE SET title = EXCLUDED.title, category = EXCLUDED.category RETURNING *
@@ -61,7 +61,7 @@ public final class BookmarkDAO {
     }
 
     public CompletableFuture<Void> delete(long id) {
-        return database.query(connection -> {
+        return database.write(connection -> {
             try (var statement = connection.prepareStatement("DELETE FROM bookmarks WHERE id = ?")) {
                 statement.setLong(1, id); statement.executeUpdate(); return null;
             }
@@ -69,7 +69,7 @@ public final class BookmarkDAO {
     }
 
     public CompletableFuture<Void> deleteByUrl(String url) {
-        return database.query(connection -> {
+        return database.write(connection -> {
             try (var statement = connection.prepareStatement("DELETE FROM bookmarks WHERE url = ?")) {
                 statement.setString(1, url); statement.executeUpdate(); return null;
             }

@@ -12,7 +12,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>21.0.12</javafx.version>
         <postgresql.version>42.7.13</postgresql.version>
+        <!-- Compatibility fallback; modern macOS uses Metal for web/video composition below. -->
         <flux.rendering>sw</flux.rendering>
+        <flux.maxHeap>1024m</flux.maxHeap>
+        <flux.engine>native</flux.engine>
         <flux.mainClass>com.flux.browser/com.flux.browser.FluxBrowser</flux.mainClass>
     </properties>
     <dependencies>
@@ -61,7 +64,12 @@
                 <configuration>
                     <mainClass>${flux.mainClass}</mainClass>
                     <options>
-                        <option>--enable-native-access=javafx.graphics,javafx.web,javafx.media</option>
+                        <option>--enable-native-access=com.flux.browser,javafx.graphics,javafx.web,javafx.media</option>
+                        <option>--add-exports=javafx.graphics/com.sun.javafx.stage=com.flux.browser</option>
+                        <option>--add-exports=javafx.graphics/com.sun.javafx.tk=com.flux.browser</option>
+                        <option>-Dflux.engine=${flux.engine}</option>
+                        <option>-Xms64m</option>
+                        <option>-Xmx${flux.maxHeap}</option>
                         <option>-Dprism.order=${flux.rendering}</option>
                     </options>
                 </configuration>
@@ -80,6 +88,86 @@
         </plugins>
     </build>
     <profiles>
+        <profile>
+            <id>module-ui-check</id>
+            <properties><flux.mainClass>com.flux.browser/com.flux.browser.BrowserSmokeChecks</flux.mainClass></properties>
+            <build><plugins><plugin>
+                <groupId>org.openjfx</groupId><artifactId>javafx-maven-plugin</artifactId>
+                <configuration><options combine.children="append">
+                    <option>--patch-module=com.flux.browser=${project.build.testOutputDirectory}</option>
+                    <option>--add-modules=jdk.httpserver,java.desktop</option>
+                    <option>-Dflux.testInput=true</option>
+                </options></configuration>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>mac-webkit</id>
+            <activation><os><family>mac</family></os></activation>
+            <build><plugins><plugin>
+                <groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId>
+                <executions><execution>
+                    <id>build-native-webkit</id><phase>generate-resources</phase><goals><goal>exec</goal></goals>
+                    <configuration>
+                        <executable>/bin/sh</executable>
+                        <arguments><argument>${project.basedir}/src/main/native/build.sh</argument>
+                            <argument>${java.home}</argument><argument>${project.build.outputDirectory}</argument><argument>${os.arch}</argument></arguments>
+                    </configuration>
+                </execution></executions>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>mac-metal</id>
+            <activation><jdk>[24,)</jdk><os><family>mac</family></os></activation>
+            <properties><flux.rendering>mtl,es2,sw</flux.rendering></properties>
+        </profile>
+        <profile>
+            <id>web-media-check</id>
+            <properties><flux.renderScale>0</flux.renderScale></properties>
+            <build><plugins><plugin>
+                <groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId>
+                <executions><execution>
+                    <id>web-media-checks</id><phase>integration-test</phase><goals><goal>exec</goal></goals>
+                    <configuration>
+                        <executable>${java.home}/bin/java</executable><classpathScope>test</classpathScope>
+                        <arguments>
+                            <argument>--enable-native-access=ALL-UNNAMED</argument>
+                            <argument>-Dflux.engine=${flux.engine}</argument>
+                            <argument>-Xms64m</argument>
+                            <argument>-Xmx${flux.maxHeap}</argument>
+                            <argument>-Dprism.order=${flux.rendering}</argument>
+                            <argument>-Dprism.verbose=true</argument>
+                            <argument>-Dflux.renderScale=${flux.renderScale}</argument>
+                            <argument>-cp</argument><classpath/>
+                            <argument>com.flux.browser.WebMediaChecks</argument>
+                        </arguments>
+                    </configuration>
+                </execution></executions>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>performance-check</id>
+            <properties><flux.check.lazy>true</flux.check.lazy><flux.engine>javafx</flux.engine></properties>
+            <build><plugins><plugin>
+                <groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId>
+                <executions><execution>
+                    <id>performance-checks</id><phase>integration-test</phase><goals><goal>exec</goal></goals>
+                    <configuration>
+                        <executable>${java.home}/bin/java</executable><classpathScope>test</classpathScope>
+                        <arguments>
+                            <argument>--enable-native-access=ALL-UNNAMED</argument>
+                            <argument>-Dflux.engine=${flux.engine}</argument>
+                            <argument>-Xms64m</argument>
+                            <argument>-Xmx${flux.maxHeap}</argument>
+                            <argument>-Dprism.order=${flux.rendering}</argument>
+                            <argument>-Dprism.verbose=true</argument>
+                            <argument>-Dflux.check.lazy=${flux.check.lazy}</argument>
+                            <argument>-cp</argument><classpath/>
+                            <argument>com.flux.browser.PerformanceChecks</argument>
+                        </arguments>
+                    </configuration>
+                </execution></executions>
+            </plugin></plugins></build>
+        </profile>
         <profile>
             <id>modern-jdk</id>
             <activation><jdk>[24,)</jdk></activation>
@@ -106,6 +194,10 @@
                         <executable>${java.home}/bin/java</executable><classpathScope>test</classpathScope>
                         <arguments>
                             <argument>--enable-native-access=ALL-UNNAMED</argument>
+                            <argument>-Dflux.testInput=true</argument>
+                            <argument>-Dflux.engine=${flux.engine}</argument>
+                            <argument>-Xms64m</argument>
+                            <argument>-Xmx${flux.maxHeap}</argument>
                             <argument>-Dprism.order=${flux.rendering}</argument>
                             <argument>-cp</argument><classpath/>
                             <argument>com.flux.browser.BrowserSmokeChecks</argument>

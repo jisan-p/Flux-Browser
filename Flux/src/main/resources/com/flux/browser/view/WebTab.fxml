@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.web.WebView?>
 <StackPane fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.WebTabController"
            styleClass="web-tab" stylesheets="@../style.css">
-    <WebView fx:id="webView" visible="false" managed="false"/>
+    <!-- The selected engine viewport is inserted here only on first web navigation. -->
     <fx:include fx:id="speedDial" source="SpeedDial.fxml"/>
     <VBox fx:id="errorPane" alignment="CENTER" spacing="18" visible="false" managed="false" styleClass="error-page">
         <Label text="CONNECTION INTERRUPTED" styleClass="eyebrow"/>

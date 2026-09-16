@@ -13,7 +13,7 @@ public final class SpeedDialDAO {
     public SpeedDialDAO(DatabaseManager database) { this.database = database; }
 
     public CompletableFuture<List<SpeedDial>> getSpeedDials() {
-        return database.query(connection -> {
+        return database.read(connection -> {
             try (var statement = connection.prepareStatement("SELECT * FROM speed_dial ORDER BY position, id")) {
                 try (var result = statement.executeQuery()) {
                     List<SpeedDial> entries = new ArrayList<>();
@@ -27,7 +27,7 @@ public final class SpeedDialDAO {
     public CompletableFuture<SpeedDial> save(long id, String title, String url) {
         String address = UrlResolver.webAddress(url);
         String name = UrlResolver.requiredText(title, "Title", 512);
-        return database.query(connection -> {
+        return database.write(connection -> {
             String sql = id == 0 ? """
                     INSERT INTO speed_dial (title, url, position)
                     VALUES (?, ?, (SELECT COALESCE(MAX(position), -1) + 1 FROM speed_dial))
@@ -45,7 +45,7 @@ public final class SpeedDialDAO {
     }
 
     public CompletableFuture<Void> delete(long id) {
-        return database.query(connection -> {
+        return database.write(connection -> {
             try (var statement = connection.prepareStatement("DELETE FROM speed_dial WHERE id = ?")) {
                 statement.setLong(1, id); statement.executeUpdate(); return null;
             }

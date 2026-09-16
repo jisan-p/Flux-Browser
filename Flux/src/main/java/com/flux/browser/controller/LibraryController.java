@@ -5,6 +5,7 @@ import com.flux.browser.db.HistoryDAO;
 import com.flux.browser.util.Dialogs;
 import com.flux.browser.util.Views;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
@@ -34,6 +35,7 @@ public final class LibraryController {
         filterField.textProperty().addListener((observable, before, after) -> debounce.playFromStart());
         entries.setCellFactory(list -> new ListCell<>() {
             private Views.View<LibraryRowController> row;
+            private Object renderedItem;
             @Override protected void updateItem(Object item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(null);
@@ -43,13 +45,17 @@ public final class LibraryController {
                     ((javafx.scene.layout.Region) row.root()).prefWidthProperty().bind(widthProperty().subtract(20));
                     setPrefWidth(0);
                 }
-                row.controller().configure(browser, LibraryController.this, item);
+                if (!Objects.equals(renderedItem, item)) {
+                    row.controller().configure(browser, LibraryController.this, item);
+                    renderedItem = item;
+                }
                 setGraphic(row.root());
             }
         });
     }
 
     public void show(boolean bookmarkMode) {
+        if (this.bookmarkMode != bookmarkMode) entries.getItems().clear();
         this.bookmarkMode = bookmarkMode;
         heading.setText(bookmarkMode ? "Bookmarks" : "History");
         subtitle.setText(bookmarkMode ? "Keep the good stuff close." : "Retrace your steps. Rediscover something good.");
@@ -64,10 +70,11 @@ public final class LibraryController {
     @FXML public void refresh() {
         if (browser == null) return;
         int version = ++request;
+        if (!root.isVisible()) return;
         addButton.setDisable(!browser.storageAvailable());
         clearButton.setDisable(!browser.storageAvailable());
-        entries.getItems().clear();
         if (!browser.storageAvailable()) {
+            entries.getItems().clear();
             resultLabel.setText("Storage is offline");
             emptyLabel.setText("Reconnect storage in Settings to view your saved data.");
             return;
@@ -76,13 +83,14 @@ public final class LibraryController {
         emptyLabel.setText("Loading…");
         CompletableFuture<? extends List<?>> future = bookmarkMode ? bookmarks.getBookmarks(filterField.getText()) : history.getHistory(filterField.getText());
         future.whenComplete((items, error) -> Platform.runLater(() -> {
-            if (version != request || browser.isClosed()) return;
+            if (version != request || browser.isClosed() || !root.isVisible()) return;
             browser.storageChanged();
             if (error != null) {
+                entries.getItems().clear();
                 resultLabel.setText("Could not load saved data");
                 emptyLabel.setText(BrowserController.friendlyError(error));
             } else {
-                entries.getItems().setAll(items);
+                if (!entries.getItems().equals(items)) entries.getItems().setAll(items);
                 resultLabel.setText(items.size() + (bookmarkMode ? " saved destinations" : " visits · newest first")
                         + (items.size() == 500 ? " · Showing up to 500 matches; narrow your search for older items." : ""));
                 emptyLabel.setText(filterField.getText().isBlank() ? "Nothing here yet. Your next discovery is waiting." : "No matches. Try another title, address, or folder.");

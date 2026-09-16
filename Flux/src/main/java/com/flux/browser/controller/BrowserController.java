@@ -13,6 +13,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import javafx.animation.Animation;
+import javafx.animation.AnimationTimer;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.css.PseudoClass;
@@ -22,11 +23,11 @@ import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
-import javafx.scene.web.WebEngine;
+import com.flux.browser.web.BrowserPage;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-/** Coordinates the shell; each tab owns its own WebEngine and session navigation history. */
+/** Coordinates the shell; each tab owns its own browser page and session navigation history. */
 public final class BrowserController {
     private record Tab(WebTabController page, Parent content, TabHeaderController header, Parent chip) {}
     @FXML private BorderPane root;
@@ -43,6 +44,10 @@ public final class BrowserController {
     @FXML private ProgressBar loadProgress;
     private final List<Tab> tabs = new ArrayList<>();
     private final PauseTransition toast = new PauseTransition(Duration.seconds(5));
+    // Merge WebKit progress/title/status bursts into one shell update per display pulse.
+    private final AnimationTimer chromeRefresh = new AnimationTimer() {
+        @Override public void handle(long now) { stop(); refreshChrome(); }
+    };
     private Stage stage;
     private DatabaseManager database;
     private HistoryDAO historyDAO;
@@ -68,6 +73,7 @@ public final class BrowserController {
         });
         stage.getScene().addEventFilter(KeyEvent.KEY_PRESSED, this::keyPressed);
         stage.maximizedProperty().addListener((observable, before, after) -> maximizeButton.setText(after ? "❐" : "□"));
+        stage.iconifiedProperty().addListener((observable, before, after) -> updateActiveContent());
         createTab();
         reconnect();
     }
@@ -79,17 +85,47 @@ public final class BrowserController {
         page.controller().configure(this, historyDAO, speedDialDAO);
         header.controller().configure(page.controller(), () -> selectTab(tab), () -> closeTab(tab.page()));
         tabs.add(tab); tabHeaders.getChildren().add(tab.chip());
+        visible(tab.content(), false);
+        tabHost.getChildren().add(tab.content());
         selectTab(tab);
         return tab;
     }
 
     @FXML public void newTab() { if (!closed) { createTab(); focusAddress(); } }
-    public WebEngine newPopupTab() { return closed ? null : createTab().page().engine(); }
+    public void newPopupTab(BrowserPage page) {
+        if (closed) { page.close(); return; }
+        createTab().page().adopt(page);
+    }
+
+    /** Cocoa receives keys while WKWebView has focus; route shell shortcuts back to FX. */
+    public void nativeShortcut(String key) {
+        if (closed) return;
+        switch (key) {
+            case "l" -> focusAddress(); case "t" -> newTab();
+            case "w" -> { if (active != null) closeTab(active.page()); }
+            case "r" -> reload(); case "d" -> toggleBookmark();
+            case "y" -> showLibrary(false); case "bookmarks" -> showLibrary(true);
+            case "home" -> home(); case "back" -> back(); case "forward" -> forward(); case "stop" -> stopLoading();
+            case "nextTab", "previousTab" -> selectTab(tabs.get(Math.floorMod(tabs.indexOf(active) + (key.equals("nextTab") ? 1 : -1), tabs.size())));
+            default -> {
+                if (key.matches("[1-9]")) {
+                    int index = key.equals("9") ? tabs.size()-1 : Integer.parseInt(key)-1;
+                    if (index < tabs.size()) selectTab(tabs.get(index));
+                }
+            }
+        }
+    }
 
     private void selectTab(Tab tab) {
         if (closed || !tabs.contains(tab)) return;
+        if (active != null && active != tab) {
+            active.page().setActive(false);
+            visible(active.content(), false);
+        }
         active = tab;
-        tabHost.getChildren().setAll(tab.content());
+        // Keep the scene association: detaching WebView on every switch recreates rendering state.
+        // Hidden tabs are unmanaged, so only the selected page participates in layout and painting.
+        visible(tab.content(), true);
         for (Tab other : tabs) other.header().selected(other == tab);
         dismissPanels();
         addressBar.setText(tab.page().locationProperty().get());
@@ -115,7 +151,7 @@ public final class BrowserController {
         int index = tabs.indexOf(tab);
         boolean wasActive = active == tab;
         tab.header().dispose(); tab.page().dispose();
-        tabs.remove(tab); tabHeaders.getChildren().remove(tab.chip());
+        tabs.remove(tab); tabHeaders.getChildren().remove(tab.chip()); tabHost.getChildren().remove(tab.content());
         if (tabs.isEmpty()) { active = null; createTab(); focusAddress(); }
         else if (wasActive) selectTab(tabs.get(Math.min(index, tabs.size() - 1)));
         else refreshChrome();
@@ -132,13 +168,13 @@ public final class BrowserController {
         } catch (IllegalArgumentException error) { message(error.getMessage()); focusAddress(); }
     }
 
-    @FXML public void home() { if (active != null) { dismissPanels(); active.page().home(); } }
+    @FXML public void home() { if (active != null) { dismissPanels(); active.page().home(); refreshChrome(); } }
     @FXML private void back() { if (panelsVisible()) dismissPanels(); else if (active != null) active.page().back(); }
     @FXML private void forward() { dismissPanels(); if (active != null) active.page().forward(); }
     @FXML private void reload() { if (library.isVisible()) libraryController.refresh(); else if (active != null) active.page().reload(); }
     @FXML private void stopLoading() { if (active != null) active.page().stop(); }
 
-    public void tabChanged(WebTabController page) { if (active != null && active.page() == page) refreshChrome(); }
+    public void tabChanged(WebTabController page) { if (!closed && active != null && active.page() == page) chromeRefresh.start(); }
     private void refreshChrome() {
         if (closed || active == null) return;
         WebTabController page = active.page();
@@ -231,22 +267,26 @@ public final class BrowserController {
 
     public void showLibrary(boolean bookmarks) {
         visible(settings, false); visible(library, true); tabHost.setVisible(false);
+        updateActiveContent();
         libraryController.show(bookmarks);
         sidebarController.select(bookmarks ? "bookmarks" : "history");
         refreshChrome();
     }
     @FXML public void settings() {
         visible(library, false); visible(settings, true); tabHost.setVisible(false);
+        updateActiveContent();
         settingsController.show(active == null ? 1 : active.page().zoom());
         sidebarController.select("settings");
         refreshChrome();
     }
     public void dismissPanels() {
         visible(library, false); visible(settings, false); tabHost.setVisible(true);
+        updateActiveContent();
         if (active != null) active.page().focus();
         refreshChrome();
     }
     private boolean panelsVisible() { return library.isVisible() || settings.isVisible(); }
+    private void updateActiveContent() { if (active != null) active.page().setActive(!panelsVisible() && !stage.isIconified()); }
     private static void visible(Node node, boolean visible) { node.setVisible(visible); node.setManaged(visible); }
     public void setAccent(boolean cyan) { root.getStyleClass().remove("cyan-theme"); if (cyan) root.getStyleClass().add("cyan-theme"); }
     public void setZoom(double zoom) { if (active != null) active.page().zoom(zoom); }
@@ -355,9 +395,10 @@ public final class BrowserController {
 
     public void close() {
         if (closed) return;
-        closed = true; bookmarkRequest++; toast.stop(); libraryController.dispose();
+        closed = true; bookmarkRequest++; toast.stop(); chromeRefresh.stop(); libraryController.dispose();
         for (Tab tab : tabs) { tab.header().dispose(); tab.page().dispose(); }
         tabs.clear();
+        tabHost.getChildren().clear();
         database.close();
     }
 }
