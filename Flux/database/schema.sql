@@ -34,13 +34,14 @@ BEGIN
             position INTEGER NOT NULL DEFAULT 0 CHECK (position >= 0)
         );
         INSERT INTO speed_dial (title, url, position) VALUES
-            ('GitHub', 'https://github.com/', 0),
-            ('Wikipedia', 'https://www.wikipedia.org/', 1),
-            ('YouTube', 'https://www.youtube.com/', 2),
-            ('MDN Web Docs', 'https://developer.mozilla.org/', 3),
-            ('OpenJFX', 'https://openjfx.io/', 4),
-            ('DuckDuckGo', 'https://duckduckgo.com/', 5);
+            ('GitHub', 'https://github.com', 0),
+            ('Wikipedia', 'https://www.wikipedia.org', 1),
+            ('YouTube', 'https://www.youtube.com', 2),
+            ('MDN Web Docs', 'https://developer.mozilla.org', 3),
+            ('OpenJFX', 'https://openjfx.io', 4),
+            ('DuckDuckGo', 'https://duckduckgo.com', 5);
     END IF;
 END
 $schema$;
 CREATE INDEX IF NOT EXISTS speed_dial_position_idx ON speed_dial (position, id);
+
