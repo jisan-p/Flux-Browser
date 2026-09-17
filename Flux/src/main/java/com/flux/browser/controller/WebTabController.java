@@ -58,7 +58,7 @@ public final class WebTabController {
         page.popup = browser::newPopupTab;
         page.closeRequested = () -> browser.closeTab(this);
         page.shortcut = browser::nativeShortcut;
-        if (page instanceof NativeWebPage n) { n.pdf.addListener(o -> changed()); n.openUrl = browser::openNewUrl; }
+        if (page instanceof NativeWebPage n) { n.pdf.addListener(o -> changed()); n.openUrl = browser::openNewUrl; n.pageAction = payload -> browser.pageAction(n, payload); }
         updatePageVisibility();
     }
 
@@ -200,6 +200,7 @@ public final class WebTabController {
     public void setActive(boolean active) { this.active = active; if (active && deferredUrl != null) activateDeferred(); updateHomeActivity(); updatePageVisibility(); }
     private void updateHomeActivity() { speedDialController.setActive(active && atHome && !disposed); }
     private void updatePageVisibility() { if (page != null) page.visible(active && !atHome && !errorPane.isVisible() && !disposed); }
+    public void applyAppearance() { speedDialController.applyAppearance(); }
     public void refreshDials() { speedDialController.refresh(); }
     private void changed() { if (!disposed && browser != null) browser.tabChanged(this); }
     private static void visible(Node node, boolean visible) { node.setVisible(visible); node.setManaged(visible); }

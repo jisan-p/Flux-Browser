@@ -59,7 +59,7 @@ These read-only queries make the persistent data visible without exposing creden
 
 **Which renderer is used?** Modern macOS uses Metal for the JavaFX shell. WKWebView renders pages and video through the system compositor independently. A faster shell pulse does not prove a video's displayed frame rate.
 
-**What survives restart?** Bookmarks, visit history, and Speed Dial. Open tabs, accent selection, and page zoom belong to the current session.
+**What survives restart?** Bookmarks, visit history, Speed Dial, appearance and named presets. Tabs, workspaces and page zoom also restore when session restoration is enabled.
 
 **What was originally omitted from Min?** Those feature groups are now implemented through Tools: workspaces/session restore, filtering, password providers, full-text search, reader/translation, downloads, and PDF viewing. Demonstrate the bounded scope in `FEATURES.md`: declarative search templates, domain filtering, and system services rather than a general extension runtime.
 

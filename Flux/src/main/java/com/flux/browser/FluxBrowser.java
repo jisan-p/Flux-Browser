@@ -3,6 +3,7 @@ package com.flux.browser;
 import com.flux.browser.controller.BrowserController;
 import com.flux.browser.db.DatabaseManager;
 import com.flux.browser.util.Views;
+import com.flux.browser.web.NativeWebPage;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Screen;
@@ -13,6 +14,11 @@ public final class FluxBrowser extends Application {
     private BrowserController browser;
 
     @Override public void start(Stage stage) {
+        // Keep the compatibility implementation available for future releases and checks.
+        // Version 1's application entry point supports the native macOS engine only.
+        if (!NativeWebPage.enabled()) {
+            throw new IllegalStateException("Flux 1 requires macOS with native WebKit. Windows, Linux and the JavaFX web engine are deferred to a future version. Run without -Dflux.engine=javafx.");
+        }
         var view = Views.<BrowserController>load("BrowserWindow");
         browser = view.controller();
         var bounds = Screen.getPrimary().getVisualBounds();

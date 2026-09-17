@@ -28,5 +28,6 @@ public abstract class BrowserPage implements AutoCloseable {
     public abstract void focus();
     public abstract void visible(boolean value);
     public abstract CompletableFuture<String> evaluate(String script);
+    public abstract CompletableFuture<String> developerTools(String operation);
     @Override public abstract void close();
 }

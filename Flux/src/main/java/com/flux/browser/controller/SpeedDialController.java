@@ -19,13 +19,27 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.TilePane;
+import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+import javafx.scene.control.ScrollPane;
 import javafx.util.Duration;
 
 public final class SpeedDialController {
+    @FXML private ScrollPane root;
+    @FXML private VBox background, homeContent, dialSection;
+    @FXML private HBox searchBox, clockRow;
     @FXML private Label clockLabel, dateLabel, dialCount, dialNote;
     @FXML private TextField searchField;
     @FXML private Button addDialButton;
     @FXML private TilePane tiles;
+    @FXML private javafx.scene.control.ContextMenu homeMenu;
+    @FXML private javafx.scene.control.MenuItem addMenuItem;
+    @FXML private void contextMenu(javafx.scene.input.ContextMenuEvent event) {
+        addMenuItem.setDisable(!browser.storageAvailable());
+        com.flux.browser.ui.Menus.show(homeMenu, root, event);
+    }
+    @FXML private void reloadDials() { refresh(); }
+    @FXML private void settings() { browser.settings(); }
     private BrowserController browser;
     private SpeedDialDAO dao;
     private Timeline clock;
@@ -39,6 +53,8 @@ public final class SpeedDialController {
         this.dao = dao;
         clock = new Timeline(new KeyFrame(Duration.minutes(1), event -> updateClock()));
         clock.setCycleCount(Timeline.INDEFINITE);
+        root.viewportBoundsProperty().addListener((o,before,after) -> { background.setMinHeight(after.getHeight()); layoutTiles(after.getWidth()); });
+        applyAppearance();
     }
 
     /** Called on the FX thread when this tab's home page becomes visible or hidden. */
@@ -47,11 +63,31 @@ public final class SpeedDialController {
         this.active = active;
         if (active) {
             updateClock();
-            clock.play();
+            if(browser.preferences().appearance.clock)clock.play();
             loadIfNeeded();
         } else clock.stop();
     }
 
+    public void applyAppearance() {
+        if(browser==null)return;
+        var a=browser.preferences().appearance;
+        background.setAlignment(switch(a.dialPosition){case "Center"->javafx.geometry.Pos.CENTER;case "Bottom"->javafx.geometry.Pos.BOTTOM_CENTER;default->javafx.geometry.Pos.TOP_CENTER;});
+        show(searchBox,a.search);show(dialSection,a.dials);show(clockRow,a.clock);
+        if(clock!=null) { if(active && a.clock)clock.play();else clock.stop(); }
+        layoutTiles(root.getViewportBounds().getWidth());
+    }
+    private void layoutTiles(double width) {
+        if(browser==null || width<=0)return;
+        var a=browser.preferences().appearance;
+        int columns=a.columns;
+        double tile=a.bigTiles?184:144;
+        tiles.setPrefTileWidth(tile);tiles.setPrefTileHeight(a.bigTiles?138:112);
+        double available=Math.max(120,Math.min(1100,width-64));
+        int fit=Math.max(1,Math.min(columns,(int)((available+18)/(tile+18))));
+        tiles.setMaxWidth(fit*(tile+18)-18);tiles.setPrefColumns(fit);
+    }
+    private static void show(Node node,boolean value) {node.setVisible(value);node.setManaged(value);}
+    @FXML private void customize() { if(browser!=null)browser.easySetup(); }
     private void updateClock() {
         var now = LocalDateTime.now();
         clockLabel.setText(now.format(DateTimeFormatter.ofPattern("HH:mm")));
@@ -122,7 +158,7 @@ public final class SpeedDialController {
     @FXML private void search() { if (browser != null) browser.navigateTo(searchField.getText()); }
     @FXML private void add() { if (browser != null) browser.editDial(null); }
     public void dispose() {
-        disposed = true; request++;
+        disposed = true; request++; homeMenu.hide();
         if (clock != null) clock.stop();
         tileViews = Map.of();
         renderedItems = null;

@@ -38,10 +38,12 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
 }
 
 #include "FluxServices.h"
+#include "FluxInspector.h"
+#include "FluxContextMenu.h"
 
 @interface FluxPage : NSObject <WKNavigationDelegate, WKUIDelegate, PDFViewDelegate>
 @property(nonatomic) long long identifier;
-@property(nonatomic, strong) WKWebView *web;
+@property(nonatomic, strong) FluxContextWebView *web;
 @property(nonatomic, strong) PDFView *pdf;
 @property(nonatomic, copy) NSString *pdfPath;
 @property(nonatomic) BOOL shown;
@@ -51,12 +53,15 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
 @property(nonatomic, weak) NSView *glass;
 @property(nonatomic) BOOL disposed;
 @property(nonatomic) BOOL stateQueued;
+@property(nonatomic) BOOL inspectionEnabled;
+@property(nonatomic) NSRect viewportFrame;
 @property(nonatomic) BOOL focusWhenShown;
 @property(nonatomic, strong) WKNavigation *navigation;
 @property(nonatomic, strong) WKNavigation *stoppedNavigation;
 - (instancetype)initWithID:(long long)identifier configuration:(WKWebViewConfiguration *)configuration;
 - (void)attach:(NSWindow *)window;
 - (void)publish;
+- (void)detachInspector;
 - (void)dispose;
 @end
 
@@ -65,17 +70,48 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
     self = [super init];
     if (self) {
         _identifier = identifier;
+        // Popup configurations can share their opener's content controller. Keep each page's
+        // selection handler separate so opening a popup never steals the opener's messages.
+        WKUserContentController *controller = [WKUserContentController new];
+        for (WKUserScript *script in configuration.userContentController.userScripts)
+            if (![script.source hasPrefix:@"if(!globalThis.fluxContextInstalled)"]) [controller addUserScript:script];
+        configuration.userContentController = controller;
         configuration.preferences.fraudulentWebsiteWarningEnabled = phishingWarnings;
         configuration.upgradeKnownHostsToHTTPS = secureHosts;
         if (blockingRules) [configuration.userContentController addContentRuleList:blockingRules];
-        _web = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration];
+        _web = [[FluxContextWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration];
+        _web.fluxIdentifier = identifier;
         _web.navigationDelegate = self; _web.UIDelegate = self;
+        _inspectionEnabled = enableInspection(_web); // Frontend still loads only on request.
+        inspectorDelegate(fluxInspector(_web), self);
+        __weak FluxPage *weakPage = self;
+        _web.didInspect = ^{ [weakPage detachInspector]; };
         _web.hidden = YES;
         _web.allowsBackForwardNavigationGestures = YES;
         for (NSString *key in @[@"URL", @"title", @"estimatedProgress", @"canGoBack", @"canGoForward"])
             [_web addObserver:self forKeyPath:key options:0 context:NULL];
     }
     return self;
+}
+// WebKit loads its frontend asynchronously for toolbar, shortcut and native menu actions.
+- (void)inspectorFrontendLoaded:(id)inspector {
+    __weak FluxPage *weakPage = self;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        FluxPage *page = weakPage;
+        if (!page || page.disposed || page.pdf || !inspectorFlag(inspector,@"isVisible")) return;
+        [page detachInspector];
+    });
+}
+- (void)detachInspector {
+    if (self.disposed || self.pdf) return;
+    id inspector = fluxInspector(self.web);
+    if (!inspectorFlag(inspector,@"isVisible")) return;
+    inspectorCall(inspector,@"detach");
+    // WebKit's detach can expand the inspected view to its entire superview. Restore the
+    // rectangle supplied by JavaFX so browser chrome stays outside the native page.
+    if (!NSIsEmptyRect(self.viewportFrame)) self.web.frame = self.viewportFrame;
+    NSWindow *window = inspectorFrontend(inspector).window;
+    if (window && window != self.owner) [window makeKeyAndOrderFront:nil];
 }
 - (void)attach:(NSWindow *)window {
     self.owner = window; self.glass = window.contentView;
@@ -102,6 +138,7 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
 }
 - (void)webView:(WKWebView *)web didStartProvisionalNavigation:(WKNavigation *)navigation {
     if (navigation == self.stoppedNavigation) return;
+    [self.web clearContext];
     self.navigation = navigation; [self publish]; emit(self.identifier, @"start", @"", 0, 0);
 }
 - (void)webView:(WKWebView *)web didFinishNavigation:(WKNavigation *)navigation {
@@ -176,7 +213,9 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
 }
 - (void)dispose {
     if (self.disposed) return;
-    self.disposed = YES;
+    self.disposed = YES; [self.web clearContext]; self.web.didInspect = nil;
+    inspectorDelegate(fluxInspector(self.web), nil);
+    if (self.inspectionEnabled) inspectorCall(fluxInspector(self.web),@"close");
     for (NSString *key in @[@"URL", @"title", @"estimatedProgress", @"canGoBack", @"canGoForward"])
         [self.web removeObserver:self forKeyPath:key];
     self.web.navigationDelegate = nil; self.web.UIDelegate = nil;
@@ -198,7 +237,9 @@ static void installKeys(void) {
             BOOL alt = (event.modifierFlags & NSEventModifierFlagOption) != 0;
             NSString *key = event.charactersIgnoringModifiers.lowercaseString;
             NSString *action = nil;
-            if (cmd && shift && [key isEqual:@"t"]) action = @"reopen";
+            if (event.keyCode == 111 || (cmd && (alt || shift) && [key isEqual:@"i"])) action = @"developerTools";
+            else if (cmd && alt && [key isEqual:@"c"]) action = @"developerConsole";
+            else if (cmd && shift && [key isEqual:@"t"]) action = @"reopen";
             else if (cmd && [@[@"l", @"t", @"w", @"r", @"d", @"y", @"1", @"2", @"3", @"4", @"5", @"6", @"7", @"8", @"9"] containsObject:key]) action = key;
             else if (cmd && shift && [key isEqual:@"b"]) action = @"bookmarks";
             else if (control && event.keyCode == 48) action = shift ? @"previousTab" : @"nextTab";
@@ -252,7 +293,8 @@ JNIEXPORT void JNICALL JNI(frame)(JNIEnv *env, jclass cls, jlong identifier, jdo
         NSView *container = p.owner.contentView;
         CGFloat top = container.isFlipped ? y : container.bounds.size.height - y - h;
         p.shown = visible;
-        p.web.frame = NSMakeRect(x, top, MAX(0, w), MAX(0, h)); p.web.hidden = !visible || p.pdf != nil;
+        p.viewportFrame = NSMakeRect(x, top, MAX(0, w), MAX(0, h));
+        p.web.frame = p.viewportFrame; p.web.hidden = !visible || p.pdf != nil;
         p.pdf.frame = p.web.frame; p.pdf.hidden = !visible;
         if (visible && p.pdf && p.positionPdf) {
             p.positionPdf = NO; [p.pdf layoutDocumentView];
@@ -267,6 +309,7 @@ JNIEXPORT void JNICALL JNI(command)(JNIEnv *env, jclass cls, jlong identifier, j
     dispatch_async(dispatch_get_main_queue(), ^{
         FluxPage *p = pages[@(identifier)]; if (!p || p.disposed) return;
         if ([op isEqual:@"pdfOpen"]) {
+            if (p.inspectionEnabled) inspectorCall(fluxInspector(p.web),@"close");
             NSUInteger version = ++p.documentVersion;
             [p.web stopLoading];
             // File parsing runs outside the UI thread; only PDFView creation/attachment is on AppKit.
@@ -305,11 +348,14 @@ JNIEXPORT void JNICALL JNI(command)(JNIEnv *env, jclass cls, jlong identifier, j
             [NSApp activateIgnoringOtherApps:YES];
             [p.owner makeKeyAndOrderFront:nil]; [p.owner makeFirstResponder:p.web];
         } else if ([op isEqual:@"testKey"]) {
+            [NSApp activateIgnoringOtherApps:YES];
             [p.owner makeKeyAndOrderFront:nil]; [p.owner makeFirstResponder:p.web];
+            BOOL inspectorShortcut = [argument isEqual:@"developerTools"];
+            NSString *characters = inspectorShortcut ? @"i" : argument;
             NSEvent *key = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint
-                modifierFlags:NSEventModifierFlagCommand timestamp:NSProcessInfo.processInfo.systemUptime
-                windowNumber:p.owner.windowNumber context:nil characters:argument
-                charactersIgnoringModifiers:argument isARepeat:NO keyCode:37];
+                modifierFlags:NSEventModifierFlagCommand | (inspectorShortcut ? NSEventModifierFlagOption : 0) timestamp:NSProcessInfo.processInfo.systemUptime
+                windowNumber:p.owner.windowNumber context:nil characters:characters
+                charactersIgnoringModifiers:characters isARepeat:NO keyCode:37];
             [NSApp postEvent:key atStart:NO];
         } else if ([op isEqual:@"back"]) p.navigation = [p.web goBack];
         else if ([op isEqual:@"forward"]) p.navigation = [p.web goForward];
@@ -322,7 +368,7 @@ JNIEXPORT void JNICALL JNI(command)(JNIEnv *env, jclass cls, jlong identifier, j
             if ([p.owner.firstResponder isKindOfClass:NSView.class] && ([(NSView *)p.owner.firstResponder isDescendantOf:p.web] || (p.pdf && [(NSView *)p.owner.firstResponder isDescendantOf:p.pdf])))
                 [p.owner makeFirstResponder:p.glass];
         } else if ([op isEqual:@"hide"]) {
-            p.shown = NO; p.web.hidden = YES; p.pdf.hidden = YES; p.focusWhenShown = NO;
+            [p.web clearContext]; p.shown = NO; p.web.hidden = YES; p.pdf.hidden = YES; p.focusWhenShown = NO;
             if ([p.owner.firstResponder isKindOfClass:NSView.class] && ([(NSView *)p.owner.firstResponder isDescendantOf:p.web] || (p.pdf && [(NSView *)p.owner.firstResponder isDescendantOf:p.pdf])))
                 [p.owner makeFirstResponder:p.glass];
         }
@@ -348,6 +394,65 @@ JNIEXPORT void JNICALL JNI(destroy)(JNIEnv *env, jclass cls, jlong identifier) {
     dispatch_async(dispatch_get_main_queue(), ^{
         [pages[@(identifier)] dispose]; [pages removeObjectForKey:@(identifier)];
         if (pages.count == 0 && keyMonitor) { [NSEvent removeMonitor:keyMonitor]; keyMonitor = nil; }
+    });
+}
+
+// Test input is scoped to Flux's own native viewport and menu. Java checks flux.testInput.
+static NSArray *fluxMenuState(NSMenu *menu) {
+    NSMutableArray *items = [NSMutableArray new];
+    for (NSMenuItem *item in menu.itemArray) {
+        [items addObject:@{@"id":item.identifier ?: @"", @"title":item.title, @"enabled":@(item.enabled), @"children":fluxMenuState(item.submenu)}];
+    }
+    return items;
+}
+static NSMenuItem *fluxFindMenuItem(NSMenu *menu, NSString *identifier, NSString *language) {
+    for (NSMenuItem *item in menu.itemArray) {
+        if ([item.identifier isEqual:identifier] && !item.submenu
+            && (!language || [item.representedObject[@"language"] isEqual:language])) return item;
+        NSMenuItem *child = fluxFindMenuItem(item.submenu, identifier, language); if (child) return child;
+    }
+    return nil;
+}
+JNIEXPORT void JNICALL JNI(contextMenuTest)(JNIEnv *env, jclass cls, jlong identifier, jlong token, jstring operation, jstring value) {
+    NSString *op = string(env, operation), *argument = string(env, value);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        FluxPage *p = pages[@(identifier)];
+        if (!p || p.disposed) { emit(identifier,@"scriptError",@"Tab closed",token,0); return; }
+        if ([op isEqual:@"show"]) {
+            NSArray *point = [argument componentsSeparatedByString:@","];
+            if (point.count != 2 || p.web.hidden) { emit(identifier,@"scriptError",@"Visible webpage required",token,0); return; }
+            CGFloat x = [point[0] doubleValue], y = [point[1] doubleValue];
+            NSPoint location = [p.web convertPoint:NSMakePoint(x, p.web.flipped ? y : p.web.bounds.size.height-y) toView:nil];
+            [NSApp activateIgnoringOtherApps:YES]; [p.owner makeKeyAndOrderFront:nil];
+            for (NSNumber *type in @[@(NSEventTypeRightMouseDown), @(NSEventTypeRightMouseUp)]) {
+                NSEvent *event = [NSEvent mouseEventWithType:type.unsignedIntegerValue location:location modifierFlags:0 timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:p.owner.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1];
+                [NSApp postEvent:event atStart:NO];
+            }
+            emit(identifier,@"script",@"posted",token,0);
+        } else if ([op isEqual:@"inspectorState"]) {
+            WKWebView *frontend = inspectorFrontend(fluxInspector(p.web));
+            NSWindow *window = frontend.window;
+            NSDictionary *state = @{@"detached":@(window && window != p.owner && window.visible),
+                @"window":@(window.windowNumber), @"viewport":@(NSEqualRects(p.web.frame,p.viewportFrame)), @"pageVisible":@(!p.web.hidden)};
+            NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:nil];
+            emit(identifier,@"script",[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding],token,0);
+        } else if ([op isEqual:@"dockInspector"]) {
+            inspectorCall(fluxInspector(p.web),@"attach"); emit(identifier,@"script",@"attached",token,0);
+        } else if ([op isEqual:@"closeInspectorWindow"]) {
+            NSWindow *window = inspectorFrontend(fluxInspector(p.web)).window;
+            if (window && window != p.owner) [window performClose:nil];
+            emit(identifier,@"script",@"closed",token,0);
+        } else if ([op isEqual:@"state"]) {
+            NSData *data = [NSJSONSerialization dataWithJSONObject:fluxMenuState(p.web.fluxMenu) options:0 error:nil];
+            emit(identifier,@"script",[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding],token,0);
+        } else if ([op isEqual:@"dismiss"]) {
+            [p.web clearContext]; emit(identifier,@"script",@"closed",token,0);
+        } else if ([op isEqual:@"activate"]) {
+            NSArray *parts = [argument componentsSeparatedByString:@":"];
+            NSMenuItem *item = fluxFindMenuItem(p.web.fluxMenu, parts.firstObject, parts.count > 1 ? parts[1] : nil);
+            if (!item || ![p.web validateMenuItem:item]) { emit(identifier,@"scriptError",@"Menu action unavailable",token,0); return; }
+            [NSApp sendAction:item.action to:item.target from:item]; [p.web clearContext]; emit(identifier,@"script",@"activated",token,0);
+        } else emit(identifier,@"scriptError",@"Unknown menu test action",token,0);
     });
 }
 
@@ -451,4 +556,50 @@ JNIEXPORT void JNICALL JNI(credential)(JNIEnv *env, jclass cls, jlong identifier
 JNIEXPORT void JNICALL JNI(testDownloadPath)(JNIEnv *env, jclass cls, jstring path) {
     NSString *destination = string(env,path);
     dispatch_async(dispatch_get_main_queue(), ^{ testDestination = destination; });
+}
+
+JNIEXPORT void JNICALL JNI(inspect)(JNIEnv *env, jclass cls, jlong identifier, jlong token, jstring operation) {
+    NSString *op = string(env,operation);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        FluxPage *p = pages[@(identifier)];
+        if (!p || p.disposed || p.pdf) { emit(identifier,@"scriptError",@"No inspectable web page",token,0); return; }
+        @try {
+            // Querying status or closing must not open the inspector frontend.
+            id inspector = p.inspectionEnabled ? fluxInspector(p.web) : nil;
+            if ([op isEqual:@"status"]) {
+                NSString *state = !p.inspectionEnabled ? @"disabled" : inspectorFlag(inspector,@"isVisible") ? @"visible" : @"closed";
+                emit(identifier,@"script",state,token,0); return;
+            }
+            if ([op isEqual:@"close"] || ([op isEqual:@"toggle"] && inspectorFlag(inspector,@"isVisible"))) {
+                inspectorCall(inspector,@"close");
+                if (!NSIsEmptyRect(p.viewportFrame)) p.web.frame = p.viewportFrame;
+                emit(identifier,@"script",@"Developer Tools closed",token,0); return;
+            }
+            BOOL local = enableInspection(p.web); p.inspectionEnabled = YES;
+            inspector = fluxInspector(p.web);
+            if (local && inspectorCall(inspector,[op isEqual:@"console"] ? @"showConsole" : @"show")) {
+                // A separate native window leaves the JavaFX viewport's geometry under Flux ownership.
+                [p detachInspector];
+                emit(identifier,@"script",@"Developer Tools opened for this tab",token,0);
+            } else {
+                emit(identifier,@"script",@"Inspection enabled. In Safari, use Develop → this Mac → Flux/Java to inspect this page.",token,0);
+            }
+        } @catch (NSException *exception) {
+            emit(identifier,@"scriptError",@"This macOS WebKit version could not open its local inspector",token,0);
+        }
+    });
+}
+
+JNIEXPORT void JNICALL JNI(inspectFrontend)(JNIEnv *env, jclass cls, jlong identifier, jlong token, jstring source) {
+    NSString *script = string(env,source);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        FluxPage *p = pages[@(identifier)];
+        id inspector = p.inspectionEnabled ? fluxInspector(p.web) : nil;
+        WKWebView *frontend = inspectorFrontend(inspector);
+        if (!p || p.disposed || !frontend || frontend == p.web) { emit(identifier,@"scriptError",@"Inspector frontend unavailable",token,0); return; }
+        [frontend evaluateJavaScript:script completionHandler:^(id result,NSError *error) {
+            if (p.disposed) return;
+            emit(identifier,error ? @"scriptError" : @"script",error ? @"Inspector frontend evaluation failed" : [result description],token,0);
+        }];
+    });
 }

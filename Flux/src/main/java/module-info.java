@@ -2,6 +2,8 @@ module com.flux.browser {
     requires javafx.controls;
     requires javafx.fxml;
     requires javafx.web;
+    requires javafx.media;
+    opens com.flux.browser.ui to javafx.fxml;
     requires java.sql;
     requires java.net.http;
     requires com.google.gson;

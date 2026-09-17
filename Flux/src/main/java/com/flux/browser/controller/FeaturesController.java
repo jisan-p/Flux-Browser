@@ -16,6 +16,8 @@ import javafx.stage.*;
 
 public final class FeaturesController {
     @FXML private BorderPane root;
+    @FXML private javafx.scene.layout.FlowPane compatibilityPageTools;
+    @FXML private TabPane featureTabs;
     @FXML private Label feedback,loginOrigin;
     @FXML private ComboBox<String> workspace,language,passwordProvider;
     @FXML private TextField workspaceName,keyword,providerName,providerUrl,textQuery,loginUser;
@@ -33,7 +35,10 @@ public final class FeaturesController {
     }
     public void configure(BrowserController browser){
         this.browser=browser;
-        language.getItems().setAll("en","bn","es","fr","de","ar","hi","ja","ko","zh-CN");
+        compatibilityPageTools.setVisible(!NativeWebPage.enabled()); compatibilityPageTools.setManaged(!NativeWebPage.enabled());
+        language.getItems().setAll(PageActions.LANGUAGES);
+        language.valueProperty().addListener((o, before, after) -> { if (!showing && after != null) { browser.preferences().translation = after; browser.saveSession(); } });
+        feedback.textProperty().addListener((o, before, after) -> { if (!root.isVisible()) browser.message(after); });
         passwordProvider.getItems().setAll("macOS Keychain","Bitwarden CLI","1Password CLI");
         
         providers.getSelectionModel().selectedItemProperty().addListener((o,a,p)->{if(p!=null){keyword.setText(p.keyword());providerName.setText(p.name());providerUrl.setText(p.template());}});
@@ -41,6 +46,7 @@ public final class FeaturesController {
         if(!NativeWebPage.enabled()){blocker.setDisable(true);https.setDisable(true);phishing.setDisable(true);}
         textResults.setCellFactory(v->new ListCell<>(){@Override protected void updateItem(HistoryEntry h,boolean empty){super.updateItem(h,empty);setText(empty||h==null?null:h.title()+"\n"+h.url());}});
     }
+    public void selectSection(String name) { featureTabs.getTabs().stream().filter(t->t.getText().equals(name)).findFirst().ifPresent(t->featureTabs.getSelectionModel().select(t)); }
     public void show(){
         showing=true;var s=browser.preferences();workspace.getItems().setAll(s.workspaces);workspace.setValue(s.workspace);
         restore.setSelected(s.restore);blocker.setSelected(s.blocker);https.setSelected(s.https);phishing.setSelected(s.phishing);fullText.setSelected(s.fullText);
@@ -62,11 +68,11 @@ public final class FeaturesController {
     @FXML private void removeProvider(){var p=providers.getSelectionModel().getSelectedItem();if(p!=null){browser.preferences().providers.remove(p);browser.saveSession();show();}}
     @FXML private void searchText(){browser.history().searchText(textQuery.getText()).whenComplete((rows,e)->Platform.runLater(()->{if(e!=null)error(e);else textResults.getItems().setAll(rows);}));}
     @FXML private void openResult(){var h=textResults.getSelectionModel().getSelectedItem();if(h!=null)browser.openNewUrl(h.url());}
-    @FXML private void reader(){
+    @FXML public void reader(){
         BrowserPage p=browser.currentPage();if(p==null || p instanceof NativeWebPage n && n.pdf.get()){feedback.setText("Open an article first.");return;}
         String url=browser.currentUrl();
         async(PageText::readerScript,script->p.evaluate(script).whenComplete((json,e)->Platform.runLater(()->{
-            if(browser.isClosed())return;
+            if(browser.isClosed() || browser.currentPage()!=p || !url.equals(browser.currentUrl()))return;
             if(e!=null){error(e);return;}if(json==null||json.isBlank()){feedback.setText("No readable article found on this page.");return;}
             try{var article=com.google.gson.JsonParser.parseString(json).getAsJsonObject();var view=Views.<ReaderController>load("Reader");
                 Stage window=new Stage();window.initOwner(browser.window());window.setTitle("Reader · Flux");window.setScene(new Scene(view.root()));
@@ -74,9 +80,8 @@ public final class FeaturesController {
             }catch(Exception failure){error(failure);}
         })));
     }
-    @FXML private void translate(){try{String url=UrlResolver.webAddress(browser.currentUrl());String lang=language.getValue();browser.preferences().translation=lang;browser.saveSession();browser.openNewUrl("https://translate.google.com/translate?sl=auto&tl="+lang+"&u="+java.net.URLEncoder.encode(url,java.nio.charset.StandardCharsets.UTF_8));}catch(Exception e){error(e);}}
+    @FXML private void translate() { try { browser.openNewUrl(PageActions.translation(browser.currentUrl(), language.getValue())); } catch(Exception e) { error(e); } }
     @FXML private void openPdf(){FileChooser chooser=new FileChooser();chooser.setTitle("Open PDF");chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF documents","*.pdf"));var file=chooser.showOpenDialog(browser.window());if(file!=null)browser.openPdf(file.toPath());}
-    @FXML private void downloadPage(){BrowserPage p=browser.currentPage();if(p instanceof NativeWebPage n)n.action("download",browser.currentUrl());else feedback.setText("Native macOS engine required for downloads.");}
     @FXML private void cancelDownload(){var d=downloads.getSelectionModel().getSelectedItem();if(d!=null)NativeWebPage.downloadAction(d.id(),"cancel");}
     @FXML private void revealDownload(){var d=downloads.getSelectionModel().getSelectedItem();if(d!=null && d.status().equals("Complete"))NativeWebPage.downloadAction(d.id(),"reveal");}
     @FXML private void downloadedPdf(){var d=downloads.getSelectionModel().getSelectedItem();if(d!=null && d.status().equals("Complete")&&d.path().toLowerCase().endsWith(".pdf"))browser.openPdf(Path.of(d.path()));}
@@ -105,6 +110,8 @@ public final class FeaturesController {
     private void error(Throwable error){while((error instanceof CompletionException || error instanceof ExecutionException) && error.getCause()!=null)error=error.getCause();
         String message=error instanceof IllegalArgumentException || error instanceof IllegalStateException ? error.getMessage() : "Action could not be completed. Check availability and try again.";
         feedback.setText(message==null?"Action could not be completed.":message);}
+    @FXML private void developerTools(){browser.showDeveloperTools();}
+    @FXML private void developerConsole(){browser.developerConsole();}
     @FXML private void dismiss(){browser.dismissPanels();}
     public void close(){loginPassword.clear();work.shutdownNow();}
 }

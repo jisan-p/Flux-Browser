@@ -1,5 +1,7 @@
 # Flux: architectural blueprint and MVP matrix
 
+Version 1 supports native macOS WebKit. Windows/Linux development is deferred; the JavaFX compatibility implementation and its checks remain in the repository for the next version.
+
 ## 1. Min browser deconstruction
 
 This analysis was completed against the supplied `../min` checkout before implementing Flux. The checkout identifies itself as Min 1.35.7 in `package.json`. It is an Electron application: `main/` manages native windows and web contents, `js/` coordinates the browser UI, `css/` styles it, `pages/` contains internal pages, and `ext/` contains larger browser subsystems. Flux uses these architectural ideas and does not bundle Min as a runtime. Reader extraction bundles the separately licensed Readability library from that checkout; see THIRD_PARTY_NOTICES.md.
@@ -31,7 +33,10 @@ flowchart LR
     Window --> Sidebar[Sidebar.fxml / SidebarController]
     Window --> Chips[TabHeader.fxml / TabHeaderController]
     Window --> Tabs[WebTab.fxml / WebTabController]
-    Tabs --> Engine[WKWebView / JavaFX fallback]
+    Tabs --> Engine[WKWebView — v1 macOS]
+    Window --> Appearance[EasySetup.fxml / EasySetupController]
+    Appearance --> Visuals[WallpaperCanvas / SystemTheme / Soundscape]
+    Appearance --> Session
     Window --> Tools[Features.fxml / FeaturesController]
     Tools --> Session[FeatureStore / atomic session JSON]
     Tools --> Native[Keychain / WKDownload / PDFKit / content rules]
@@ -108,3 +113,7 @@ The Maven build targets Java 21 and pins OpenJFX 21.0.12 and PostgreSQL JDBC 42.
 The previous omitted-feature groups are now implemented. [FEATURES.md](FEATURES.md) describes their exact scope and defaults. Session metadata uses atomic local JSON, password values use macOS Keychain or an explicitly selected external CLI item, and opt-in page text uses PostgreSQL. These stores have separate lifecycles: clearing browsing history purges page text but preserves sessions, bookmarks, and credentials.
 
 `FeatureStore` serializes disk work; session writes are debounced for one second. `FeaturesController` uses two background workers with a bounded 16-task queue for extraction-script loading, filter updates, and CLI processes. Keychain operations use a native serial queue; PDF parsing runs in the background and stale results are discarded. Downloads remain owned independently of tabs, emit throttled progress, and are cancelled at application shutdown. No page rendering or JDBC work is moved onto arbitrary concurrent UI threads.
+
+## GX-style Mac appearance
+
+`Appearance` is a validated data object stored alongside existing session preferences. Theme changes, sidebar/layout updates and original procedural wallpaper redraws are coalesced into JavaFX pulses. Controls remain FXML-authored. Custom image decoding runs in the background, and appearance file operations use a bounded worker; the default wallpaper has no idle render loop. The existing JavaFX compatibility engine remains in the repository. Details and explicit reference differences are in [CUSTOMIZATION.md](CUSTOMIZATION.md).

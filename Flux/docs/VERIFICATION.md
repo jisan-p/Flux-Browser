@@ -2,6 +2,37 @@
 
 Originally verified on September 12, 2026; the performance changes below were checked on September 13–14 on this Mac. Hardware inspection confirmed Apple M3, 8 logical CPUs, 8 GiB RAM, and native arm64 JDKs. PostgreSQL checks used an isolated PostgreSQL 18.3 cluster and its disposable `flux_test` database. The supplied Min checkout was not modified.
 
+## GX-style appearance (September 17)
+
+The installed Opera GX Speed Dial and Easy Setup were inspected using macOS accessibility and window captures after permission was granted. Flux screenshots were then inspected at normal and compact sizes. The supported customization controls, defaults, and explicit differences from Opera GX are listed in [CUSTOMIZATION.md](CUSTOMIZATION.md).
+
+- Appearance validation checks passed for hostile CSS/font values, remote asset references, numeric limits, old-session migration and named-preset persistence.
+- `AppearanceUiChecks` passed: actual FXML controls, light/dark changes, named presets, a 940 × 650 drawer, native WKWebView reflow beside Easy Setup, restored viewport width, and appearance persistence across relaunch with tab restoration disabled.
+- The native offline `BrowserSmokeChecks` suite passed with the redesigned shell. The final-tab check now expects an empty Home address field, matching the intentional UI change; the internal Home location remains unchanged.
+- `DeveloperToolsChecks` passed with real Web Inspector panels and Console evaluation after the redesign.
+- `FeatureUiChecks` passed: lazy session restore, workspaces/focus, arithmetic, reader, translation destination, native domain blocking, download bytes, PDFKit and switching between PDFs and web pages.
+- The final `mvn -q clean verify` passed, including compilation of the native bridge and all headless checks.
+
+The default Home and Easy Setup screenshots are retained in `docs/images/flux-gx-*.png`. No user database or browser session was used for automated UI fixtures. The external Opera reference window was used only for visual inspection. This does not establish full Opera GX feature or pixel parity, live-site speed improvements, or audible-output testing.
+
+## Version 1 macOS scope and Developer Tools (September 17)
+
+Version 1 targets macOS with native WKWebView. Windows/Linux code, FXML, dependencies and compatibility diagnostics remain in the repository for a future version; the normal v1 application entry point requires native macOS WebKit. Earlier compatibility-engine results below are historical, not v1 platform support claims.
+
+Validation on this Mac:
+
+- `mvn -q clean verify` passed, including the native library build, feature checks and browser validation checks.
+- `DeveloperToolsChecks` passed through the named-module launcher. A local HTTP fixture opened Apple's actual Web Inspector frontend with Elements, Network and Console. The inspector Console evaluated `window.fixtureValue + 1` in the inspected page and returned 43. The Tools button, app-local native Option+Cmd+I event, FXML F12 event, toggle, separate tab ownership and disposal checks passed.
+- The native offline `BrowserSmokeChecks` suite passed through the v1 application entry point: FXML, navigation, tabs, popups, stop/errors, settings and browsing with unavailable storage.
+
+These checks did not exercise physical right-click input, every inspector panel, or multiple macOS/WebKit versions. Direct inspector controls use guarded WebKit private selectors; remote inspectability uses the public macOS 13.3+ API. Compatibility/Eruda work is preserved but not part of this release's validation.
+
+Run the inspector check from `Flux` without a database or external website:
+
+```sh
+mvn -q -Pmodule-ui-check -Dflux.mainClass=com.flux.browser/com.flux.browser.DeveloperToolsChecks test-compile javafx:run
+```
+
 ## Native macOS WebKit replacement (September 16)
 
 The user explicitly approved replacing JavaFX WebView while retaining the JavaFX interface. macOS now defaults to WKWebView; `-Dflux.engine=javafx` selects the compatibility engine. A locally compiled JNI bridge embeds the native view inside the existing NSWindow, dispatches all AppKit work asynchronously, and returns observable state to JavaFX. WebKit owns its helper processes; no page pixels pass through JavaFX WebView. The Java heap remains capped at 1 GiB; native/helper-process memory is additional.
@@ -161,7 +192,7 @@ The retained [Speed Dial screenshot](images/flux-speed-dial.png) is included in 
 
 ## Scope of these results
 
-Windows and Linux were not executed in this environment. Maven's platform-native dependency selection is configured, but those platforms still need their own desktop smoke test. Scene Builder's GUI was not automated; the FXML itself was loaded by JavaFX, and the guide provides the live-edit workflow. Site compatibility remains dependent on WebKit's supported web APIs and media formats. This is a functional desktop MVP, not a substitute for a full Chromium browser.
+Windows and Linux are deferred beyond v1. Their compatibility implementation and Maven dependencies are preserved, but those platforms still need their own release work and desktop tests. Scene Builder's GUI was not automated; the FXML itself was loaded by JavaFX, and the guide provides the live-edit workflow. Site compatibility remains dependent on WebKit's supported web APIs and media formats. This is a functional desktop MVP, not a substitute for a full Chromium browser.
 
 To reproduce the checks, use the commands and disposable database instructions in [README.md](../README.md). The five-minute demonstration is in [PRESENTATION.md](PRESENTATION.md), and every UI/controller binding is documented in [UI_SCENEBUILDER_GUIDE.md](UI_SCENEBUILDER_GUIDE.md).
 
@@ -200,3 +231,17 @@ FLUX_CHECK_PDF_SCREEN=true mvn -Pfeature-ui-check verify
 The Keychain option creates and removes one test login. The screen option brings only Flux forward and captures its test window; macOS screen-capture permissions may apply. PDF page rasters and JavaFX scene captures do not need that optional screen check. Ordinary feature runs do not inspect external vaults.
 
 The Bitwarden/1Password command adapters have not been verified against signed-in accounts. Live phishing-warning responses, particular known-host HTTPS upgrade decisions and translated third-party page content were not asserted; the tests verify the configured controls and translation destination. Downloads have no resumable state after app exit. See the feature guide for the implemented limits.
+
+### GX shell polish — 17 September 2026
+
+`mvn -q verify` passed. Native `BrowserSmokeChecks` passed with unreachable test storage (no user database changes). `AppearanceUiChecks` exercises tab duplicate/close-right/close-others/reopen, Focus mode menu restrictions, starter shortcut disabled actions, Settings search/empty results, direct theme and mode selection, compact layout, Home customization, native viewport reflow, preset persistence and relaunch. Screenshots are written to `target/screenshots/gx-*.png`.
+
+The Settings view was inspected at 1400×900 and 940×650. Theme previews wrap and the card column scrolls vertically at the smaller size. The top accent follows the selected tab; shell menus use the current palette. Native webpage context menus remain supplied by macOS WebKit.
+
+### Page actions and workspace access — 17 September 2026
+
+`FeatureUiChecks` now opens the actual AppKit context menu on local pages. It checks native Copy/Inspect Element retention, selected-text search in a new tab, disabled search without a selection, Reader extraction, translation destination, and Save Page document bytes. It also verifies the isolated selection handler is inaccessible from page scripts and the Workspaces button sits below the window controls. The fixture uses a disposable profile and test download destinations. `FeatureChecks` checks plain-text search semantics and URL encoding.
+
+Webpage actions use AppKit's public menu hook and existing WebKit downloads; no private context-menu delegate or polling timer is introduced. Translation and search open new tabs subject to Focus mode and tab limits. The page identity and URL are checked before applying a menu action. The JavaFX fallback Reader/Translate controls are retained, hidden in the native macOS build.
+
+The native offline `BrowserSmokeChecks` also passed, covering navigation, popups, tab lifecycle, native keyboard shortcuts, errors and Settings. The test keyboard hook explicitly foregrounds Flux before posting its app-local event.

@@ -10,6 +10,16 @@ import java.util.*;
 public final class FeatureChecks {
     public static void run() throws Exception {
         var state = new FeatureStore.State();
+        var appearance = new Appearance();
+        appearance.accent="red; -fx-background-image:url(https://invalid.test)";
+        appearance.image="https://invalid.test/image.png";appearance.font="System';-fx-font-size:90";
+        appearance.opacity=Double.NaN;appearance.columns=900;appearance.blur=999;
+        appearance.normalize();
+        BrowserChecks.equal(appearance.accent,"#fa1e4e");BrowserChecks.equal(appearance.image,"");
+        BrowserChecks.equal(appearance.font,"System");BrowserChecks.equal(appearance.opacity,0.85);
+        BrowserChecks.equal(appearance.columns,8);BrowserChecks.equal(appearance.blur,20.0);
+        state.appearance.theme("Ultraviolet");state.appearance.sidebar=false;state.appearance.columns=4;
+        state.appearancePresets.put("Night",state.appearance.copy());
         BrowserChecks.equal(SearchTools.resolve("!gh Java FX",state.providers),"https://github.com/search?q=Java+FX");
         BrowserChecks.equal(SearchTools.resolve("github.com",state.providers),"github.com");
         BrowserChecks.equal(SearchTools.answer("github.com"),"");
@@ -42,6 +52,9 @@ public final class FeatureChecks {
             var loaded=store.load().get();
             BrowserChecks.equal(loaded.tabs,state.tabs);
             BrowserChecks.equal(loaded.selectedTab,1);
+            BrowserChecks.equal(loaded.appearance.accent,"#965bff");
+            BrowserChecks.check(!loaded.appearance.sidebar,"appearance persisted independently of session restore");
+            BrowserChecks.equal(loaded.appearancePresets.get("Night").columns,4);
             BrowserChecks.equal(loaded.passwordProvider,"macOS Keychain");
             BrowserChecks.check(!loaded.fullText,"full text requires opt-in");
             var saved=store.save(state); state.workspace="Later"; saved.get();
@@ -51,12 +64,17 @@ public final class FeatureChecks {
             state.tabs.add(new FeatureStore.SavedTab("Default","https://user:secret@example.com/","Unsafe URL",1));
             store.save(state).get(); BrowserChecks.equal(store.load().get().tabs.size(),2);
             try(var files=Files.list(directory)){BrowserChecks.equal(files.filter(p -> p.toString().endsWith(".tmp")).count(),0L);}
+            Files.writeString(directory.resolve("session.json"),"{\"tabs\":[],\"workspaces\":[\"Default\"]}");
+            BrowserChecks.equal(store.load().get().appearance.theme,"GX Classic");
             Files.writeString(directory.resolve("session.json"),"{bad json");
             try {store.load().get();throw new AssertionError("Corrupt session accepted");}catch(java.util.concurrent.ExecutionException expected) { }
         } finally {
             if(old==null)System.clearProperty("flux.profileDir");else System.setProperty("flux.profileDir",old);
             try(var files=Files.list(directory)){for(Path file:files.toList())Files.delete(file);}Files.delete(directory);
         }
+        BrowserChecks.equal(PageActions.search("example.com"), "https://duckduckgo.com/?q=example.com");
+        BrowserChecks.equal(PageActions.search("= 2 + 2"), "https://duckduckgo.com/?q=%3D+2+%2B+2");
+        BrowserChecks.check(PageActions.translation("https://example.com/?a=1&b=2", "bn").endsWith("https%3A%2F%2Fexample.com%2F%3Fa%3D1%26b%3D2"), "translation encodes entire URL");
         System.out.println("FeatureChecks passed: session round-trip/validation, search plugins, arithmetic, origins, reader asset, and domain rules.");
     }
     private static void reject(Runnable action){try{action.run();throw new AssertionError("Unsafe value accepted");}catch(IllegalArgumentException expected){}}

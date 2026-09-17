@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?><?import javafx.scene.shape.SVGPath?><?import javafx.scene.layout.*?>
+<ScrollPane fx:id="root" id="easySetup" fitToWidth="true" hbarPolicy="NEVER" prefWidth="480" minWidth="320" maxWidth="480" visible="false" managed="false" styleClass="easy-setup" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.EasySetupController">
+ <content><VBox spacing="25" styleClass="easy-content">
+  <HBox alignment="CENTER_LEFT"><Label text="EASY SETUP" styleClass="easy-title"/><Region HBox.hgrow="ALWAYS"/><Button onAction="#allSettings" accessibleText="All settings" styleClass="icon-button"><graphic><SVGPath content="M 7 1 L 13 1 L 14 4 L 17 5 L 20 4 L 22 9 L 19 11 L 19 14 L 21 16 L 18 21 L 15 20 L 12 22 L 10 24 L 5 22 L 5 19 L 2 17 L 0 17 L -1 11 L 2 10 L 3 7 L 3 4 L 7 1 Z M 15 12 A 5 5 0 1 1 5 12 A 5 5 0 1 1 15 12 Z" styleClass="line-icon"/></graphic></Button><Button text="×" onAction="#closePanel" accessibleText="Close Easy Setup"/></HBox>
+  <VBox spacing="12"><Label text="PRESETS" styleClass="section-heading"/><VBox spacing="10" styleClass="easy-card">
+   <HBox spacing="8"><ComboBox fx:id="preset" promptText="Your saved presets" maxWidth="Infinity" HBox.hgrow="ALWAYS"/><Button text="Apply" onAction="#loadPreset"/><Button text="×" onAction="#deletePreset" accessibleText="Remove selected preset"/></HBox>
+   <HBox spacing="8"><TextField fx:id="presetName" promptText="Name this setup" HBox.hgrow="ALWAYS"/><Button fx:id="saveAppearancePreset" text="Save" onAction="#savePreset"/></HBox>
+   <HBox spacing="8"><Button text="Import…" onAction="#importPreset"/><Button text="Export…" onAction="#exportPreset"/><Region HBox.hgrow="ALWAYS"/><Button text="Reset" onAction="#reset"/></HBox>
+  </VBox></VBox>
+  <VBox spacing="12"><Label text="THEMES" styleClass="section-heading"/><VBox spacing="15" styleClass="easy-card">
+   <TilePane prefColumns="3" hgap="8" vgap="8" prefTileWidth="105" prefTileHeight="98">
+    <Button userData="GX Classic" onAction="#theme" styleClass="theme-swatch" style="-preview-color:#fa1e4e;"><graphic><VBox alignment="CENTER" spacing="8"><StackPane styleClass="theme-preview"><SVGPath content="M 1 1 L 80 1 L 80 45 L 1 45 L 1 29 L 4 25 L 1 21 Z M 7 9 L 12 9 L 12 14 L 7 14 Z M 7 20 L 12 20 L 12 25 L 7 25 Z M 7 31 L 12 31 L 12 36 L 7 36 Z" styleClass="theme-outline"/></StackPane><Label text="GX Classic" styleClass="theme-name"/></VBox></graphic></Button>
+    <Button userData="Ultraviolet" onAction="#theme" styleClass="theme-swatch" style="-preview-color:#965bff;"><graphic><VBox alignment="CENTER" spacing="8"><StackPane styleClass="theme-preview"><SVGPath content="M 1 1 L 80 1 L 80 45 L 1 45 L 1 29 L 4 25 L 1 21 Z M 7 9 L 12 9 L 12 14 L 7 14 Z M 7 20 L 12 20 L 12 25 L 7 25 Z M 7 31 L 12 31 L 12 36 L 7 36 Z" styleClass="theme-outline"/></StackPane><Label text="Ultraviolet" styleClass="theme-name"/></VBox></graphic></Button>
+    <Button userData="Sub Zero" onAction="#theme" styleClass="theme-swatch" style="-preview-color:#536dfe;"><graphic><VBox alignment="CENTER" spacing="8"><StackPane styleClass="theme-preview"><SVGPath content="M 1 1 L 80 1 L 80 45 L 1 45 L 1 29 L 4 25 L 1 21 Z M 7 9 L 12 9 L 12 14 L 7 14 Z M 7 20 L 12 20 L 12 25 L 7 25 Z M 7 31 L 12 31 L 12 36 L 7 36 Z" styleClass="theme-outline"/></StackPane><Label text="Sub Zero" styleClass="theme-name"/></VBox></graphic></Button>
+    <Button userData="Frost" onAction="#theme" styleClass="theme-swatch" style="-preview-color:#00d9ed;"><graphic><VBox alignment="CENTER" spacing="8"><StackPane styleClass="theme-preview"><SVGPath content="M 1 1 L 80 1 L 80 45 L 1 45 L 1 29 L 4 25 L 1 21 Z M 7 9 L 12 9 L 12 14 L 7 14 Z M 7 20 L 12 20 L 12 25 L 7 25 Z M 7 31 L 12 31 L 12 36 L 7 36 Z" styleClass="theme-outline"/></StackPane><Label text="Frost" styleClass="theme-name"/></VBox></graphic></Button>
+    <Button userData="Rose Quartz" onAction="#theme" styleClass="theme-swatch" style="-preview-color:#f28ac5;"><graphic><VBox alignment="CENTER" spacing="8"><StackPane styleClass="theme-preview"><SVGPath content="M 1 1 L 80 1 L 80 45 L 1 45 L 1 29 L 4 25 L 1 21 Z M 7 9 L 12 9 L 12 14 L 7 14 Z M 7 20 L 12 20 L 12 25 L 7 25 Z M 7 31 L 12 31 L 12 36 L 7 36 Z" styleClass="theme-outline"/></StackPane><Label text="Rose Quartz" styleClass="theme-name"/></VBox></graphic></Button>
+    <Button userData="Mint" onAction="#theme" styleClass="theme-swatch" style="-preview-color:#57dfb5;"><graphic><VBox alignment="CENTER" spacing="8"><StackPane styleClass="theme-preview"><SVGPath content="M 1 1 L 80 1 L 80 45 L 1 45 L 1 29 L 4 25 L 1 21 Z M 7 9 L 12 9 L 12 14 L 7 14 Z M 7 20 L 12 20 L 12 25 L 7 25 Z M 7 31 L 12 31 L 12 36 L 7 36 Z" styleClass="theme-outline"/></StackPane><Label text="Mint" styleClass="theme-name"/></VBox></graphic></Button>
+   </TilePane>
+   <HBox alignment="CENTER_LEFT" spacing="12"><Label text="Mode" HBox.hgrow="ALWAYS" maxWidth="Infinity"/><ComboBox fx:id="mode" prefWidth="160"/></HBox>
+   <HBox alignment="CENTER_LEFT" spacing="12"><Label text="Highlight" HBox.hgrow="ALWAYS" maxWidth="Infinity"/><ColorPicker fx:id="accent"/></HBox>
+   <HBox alignment="CENTER_LEFT" spacing="12"><Label text="Background" HBox.hgrow="ALWAYS" maxWidth="Infinity"/><ColorPicker fx:id="base"/></HBox>
+  </VBox></VBox>
+  <VBox spacing="12"><CheckBox fx:id="wallpapers" text="WALLPAPERS" styleClass="section-heading"/><VBox spacing="12" styleClass="easy-card">
+   <ComboBox fx:id="wallpaper" maxWidth="Infinity"/><Button text="Add your wallpaper…" onAction="#chooseImage" maxWidth="Infinity" styleClass="secondary-button"/><Label fx:id="imageName" styleClass="muted" wrapText="true"/>
+   <Label text="Brightness"/><Slider fx:id="brightness" min="0" max="100" accessibleText="Wallpaper brightness"/>
+   <Label text="Blur"/><Slider fx:id="blur" min="0" max="20" accessibleText="Wallpaper blur"/>
+   <Label text="Vignette"/><Slider fx:id="vignette" min="0" max="100" accessibleText="Wallpaper vignette"/>
+  </VBox></VBox>
+  <VBox spacing="12"><Label text="APPEARANCE" styleClass="section-heading"/><VBox spacing="14" styleClass="easy-card">
+   <Label text="Interface spacing"/><ComboBox fx:id="layout" maxWidth="Infinity"/>
+   <Label text="Interface opacity"/><Slider fx:id="opacity" min="20" max="100" accessibleText="Interface opacity"/>
+   <CheckBox fx:id="elementBackgrounds" text="Show element backgrounds"/>
+   <Label text="Interface font"/><ComboBox fx:id="font" maxWidth="Infinity"/>
+   <Label text="Font size"/><Slider fx:id="fontSize" min="11" max="18" majorTickUnit="1" snapToTicks="true" minorTickCount="0" showTickLabels="true" accessibleText="Interface font size"/>
+   <CheckBox fx:id="animations" text="Animate Speed Dial effects"/>
+  </VBox></VBox>
+  <VBox spacing="12"><Label text="START PAGE" styleClass="section-heading"/><VBox spacing="14" styleClass="easy-card">
+   <Label text="Speed Dial position"/><ComboBox fx:id="dialPosition" maxWidth="Infinity"/><Label text="Speed Dial effect"/><ComboBox fx:id="tileEffect" maxWidth="Infinity"/><CheckBox fx:id="bigTiles" text="Use bigger Speed Dial tiles"/><CheckBox fx:id="search" text="Show search box"/><CheckBox fx:id="dials" text="Show Speed Dial"/><CheckBox fx:id="tileTitles" text="Show tile titles"/><CheckBox fx:id="clock" text="Show clock and date"/>
+   <Label text="Maximum tiles per row"/><Slider fx:id="columns" min="3" max="8" majorTickUnit="1" snapToTicks="true" minorTickCount="0" showTickLabels="true" accessibleText="Speed Dial columns"/>
+  </VBox></VBox>
+  <VBox spacing="12"><Label text="SIDEBAR AND TOOLBAR" styleClass="section-heading"/><VBox spacing="14" styleClass="easy-card">
+   <CheckBox fx:id="sidebar" text="Show sidebar shortcuts"/><CheckBox fx:id="statusBar" text="Show status and storage bar"/>
+  </VBox></VBox>
+  <VBox spacing="12"><Label text="SOUNDS AND MUSIC" styleClass="section-heading"/><VBox spacing="14" styleClass="easy-card">
+   <CheckBox fx:id="sounds" text="Browser click sounds"/><CheckBox fx:id="typingSounds" text="Address bar typing sounds"/>
+   <CheckBox fx:id="musicEnabled" text="Background music"/><Button text="Choose music…" onAction="#chooseMusic"/><Label fx:id="musicName" styleClass="muted" wrapText="true"/>
+   <Label text="Volume"/><Slider fx:id="volume" min="0" max="100" accessibleText="Browser audio volume"/>
+  </VBox></VBox>
+  <Label fx:id="feedback" text="Changes save automatically on this Mac." styleClass="muted" wrapText="true"/>
+  <Button text="Go to full browser settings" onAction="#allSettings" maxWidth="Infinity" styleClass="secondary-button"/>
+ </VBox></content>
+</ScrollPane>

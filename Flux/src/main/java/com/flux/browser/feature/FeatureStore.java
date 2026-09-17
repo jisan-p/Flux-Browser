@@ -17,6 +17,8 @@ public final class FeatureStore implements AutoCloseable {
         public List<String> workspaces = new ArrayList<>(List.of("Default"));
         public String workspace = "Default";
         public int selectedTab;
+        public Appearance appearance = new Appearance();
+        public Map<String, Appearance> appearancePresets = new LinkedHashMap<>();
         public boolean restore = true, blocker = true, https = true, phishing = true, fullText;
         public String translation = "en", passwordProvider = "macOS Keychain";
         public Set<String> allowedSites = new HashSet<>();
@@ -59,6 +61,12 @@ public final class FeatureStore implements AutoCloseable {
                 state.providers.removeIf(p -> { try { SearchTools.validate(p); return false; } catch(Exception e) { return true; } });
                 if (!List.of("macOS Keychain","Bitwarden CLI","1Password CLI").contains(state.passwordProvider == null ? "" : state.passwordProvider)) state.passwordProvider = "macOS Keychain";
                 if (state.translation == null || !state.translation.matches("[a-z]{2}(-[A-Z]{2})?")) state.translation = "en";
+                if(state.appearance==null)state.appearance=new Appearance();
+                state.appearance.normalize();
+                if(state.appearancePresets==null)state.appearancePresets=new LinkedHashMap<>();
+                state.appearancePresets.entrySet().removeIf(e -> e.getKey()==null || e.getKey().isBlank() || e.getKey().length()>40 || e.getValue()==null);
+                if(state.appearancePresets.size()>20)state.appearancePresets.clear();
+                state.appearancePresets.values().forEach(Appearance::normalize);
                 if(!state.workspaces.contains(state.workspace))state.workspace=state.workspaces.getFirst();
                 return state;
             } catch (Exception e) { throw new CompletionException(e); }

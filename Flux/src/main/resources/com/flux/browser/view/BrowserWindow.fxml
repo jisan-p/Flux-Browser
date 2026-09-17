@@ -2,24 +2,36 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.SVGPath?>
-<BorderPane fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+<?import com.flux.browser.ui.WallpaperCanvas?>
+<?import com.flux.browser.ui.ChromeContour?>
+<StackPane fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.flux.browser.controller.BrowserController" styleClass="browser-root" stylesheets="@../style.css">
-    <left><fx:include fx:id="sidebar" source="Sidebar.fxml"/></left>
+    <WallpaperCanvas fx:id="wallpaperCanvas" managed="false"/>
+    <BorderPane fx:id="shell">
+    <left><VBox styleClass="window-rail" alignment="TOP_CENTER" prefWidth="46" minWidth="46" maxWidth="46">
+      <VBox spacing="9" alignment="CENTER" styleClass="traffic-lights">
+       <Button text="" onAction="#quit" styleClass="traffic,traffic-close" accessibleText="Close window"/>
+       <Button text="" onAction="#minimize" styleClass="traffic,traffic-minimize" accessibleText="Minimize window"/>
+       <Button fx:id="maximizeButton" text="" onAction="#maximize" styleClass="traffic,traffic-maximize" accessibleText="Maximize or restore window"/>
+      </VBox>
+      <Button fx:id="workspacesButton" onAction="#workspaces" styleClass="sidebar-button" accessibleText="Workspaces">
+       <graphic><SVGPath content="M 1 5 L 14 5 L 14 18 L 1 18 Z M 5 1 L 18 1 L 18 14" styleClass="line-icon"/></graphic>
+       <tooltip><Tooltip text="Workspaces · organize your tabs"/></tooltip>
+      </Button>
+      <fx:include fx:id="sidebar" source="Sidebar.fxml" VBox.vgrow="ALWAYS"/>
+     </VBox></left>
     <center>
         <BorderPane>
             <top>
                 <VBox>
                     <HBox styleClass="tab-strip" alignment="CENTER_LEFT" spacing="6">
-                        <ScrollPane fx:id="tabScroll" fitToHeight="true" hbarPolicy="NEVER" vbarPolicy="NEVER" pannable="true" HBox.hgrow="ALWAYS" minWidth="100" styleClass="tab-scroll">
+                        <ScrollPane fx:id="tabScroll" fitToHeight="true" hbarPolicy="NEVER" vbarPolicy="NEVER" pannable="true" HBox.hgrow="NEVER" minWidth="100" styleClass="tab-scroll">
                             <content><HBox fx:id="tabHeaders" alignment="CENTER_LEFT" spacing="6"/></content>
                         </ScrollPane>
                         <Button fx:id="newTabButton" text="+" styleClass="icon-button,new-tab-button" onAction="#newTab" accessibleText="New tab">
                             <tooltip><Tooltip text="New tab · Ctrl/Cmd+T"/></tooltip>
                         </Button>
-                        <Region fx:id="titleDrag" minWidth="35" prefWidth="100" onMousePressed="#beginDrag" onMouseDragged="#dragWindow" onMouseClicked="#titleClicked"/>
-                        <Button text="−" onAction="#minimize" styleClass="window-button" accessibleText="Minimize window"/>
-                        <Button fx:id="maximizeButton" text="□" onAction="#maximize" styleClass="window-button" accessibleText="Maximize or restore window"/>
-                        <Button text="×" onAction="#quit" styleClass="window-button,window-close" accessibleText="Close window"/>
+                        <Region HBox.hgrow="ALWAYS" fx:id="titleDrag" minWidth="35" prefWidth="100" onMousePressed="#beginDrag" onMouseDragged="#dragWindow" onMouseClicked="#titleClicked"/>
                     </HBox>
                     <HBox styleClass="navigation-strip" alignment="CENTER_LEFT" spacing="6">
                         <Button fx:id="backButton" onAction="#back" styleClass="icon-button" accessibleText="Back">
@@ -43,31 +55,35 @@
                             <tooltip><Tooltip text="Home · Alt+Home"/></tooltip>
                         </Button>
                         <HBox styleClass="address-box" alignment="CENTER_LEFT" spacing="10" HBox.hgrow="ALWAYS">
-                            <Label fx:id="schemeLabel" text="FLUX" styleClass="scheme-label" minWidth="38"/>
+                            <Label fx:id="schemeLabel" text="⌕" styleClass="scheme-label" minWidth="18"/>
                             <TextField fx:id="addressBar" promptText="Search the web or enter an address" onAction="#navigate" HBox.hgrow="ALWAYS" styleClass="address-input" accessibleText="Web address or search query"/>
                             <Button fx:id="bookmarkButton" text="☆" onAction="#toggleBookmark" styleClass="bookmark-button" accessibleText="Bookmark this page">
                                 <tooltip><Tooltip text="Toggle bookmark · Ctrl/Cmd+D"/></tooltip>
                             </Button>
                         </HBox>
                         <Button fx:id="featuresButton" text="Tools" onAction="#features" styleClass="icon-button" accessibleText="Browser tools"/>
-                        <Button text="•••" onAction="#settings" styleClass="icon-button" accessibleText="Open settings"/>
+                        <Button fx:id="easySetupButton" onAction="#easySetup" styleClass="icon-button" accessibleText="Easy Setup">
+                         <graphic><SVGPath content="M 0 3 L 18 3 M 0 9 L 18 9 M 0 15 L 18 15 M 5 0 L 5 6 M 13 6 L 13 12 M 7 12 L 7 18" styleClass="line-icon"/></graphic>
+                         <tooltip><Tooltip text="Easy Setup"/></tooltip>
+                        </Button>
                     </HBox>
                     <HBox fx:id="documentBar" visible="false" managed="false" spacing="10" style="-fx-padding:8;" alignment="CENTER_LEFT">
                         <Label text="PDF viewer"/><Button text="Previous page" onAction="#pdfPrevious"/><Button text="Next page" onAction="#pdfNext"/><Button text="−" onAction="#pdfZoomOut"/><Button text="+" onAction="#pdfZoomIn"/>
                     </HBox>
+                    <Label fx:id="toastText" visible="false" managed="false" wrapText="true" maxWidth="Infinity" styleClass="toast-notice"/>
                     <ProgressBar fx:id="loadProgress" progress="0" maxWidth="Infinity" prefHeight="2" minHeight="2" maxHeight="2" styleClass="page-progress"/>
                 </VBox>
             </top>
             <center>
-                <StackPane fx:id="contentHost">
+                <BorderPane fx:id="contentLayout"><center><StackPane fx:id="contentHost">
                     <StackPane fx:id="tabHost"/>
                     <fx:include fx:id="library" source="Library.fxml"/>
                     <fx:include fx:id="settings" source="Settings.fxml"/>
                     <fx:include fx:id="features" source="Features.fxml"/>
-                </StackPane>
+                </StackPane></center><right><fx:include fx:id="easySetup" source="EasySetup.fxml"/></right></BorderPane>
             </center>
             <bottom>
-                <HBox styleClass="status-bar" alignment="CENTER_LEFT" spacing="12">
+                <HBox fx:id="statusBar" styleClass="status-bar" alignment="CENTER_LEFT" spacing="12">
                     <Label fx:id="databaseStatus" text="●  CONNECTING STORAGE" styleClass="storage-label"/>
                     <Label fx:id="statusText" text="Ready to explore" HBox.hgrow="ALWAYS" maxWidth="Infinity" minWidth="0"/>
                     <Label fx:id="tabCount" text="1 TAB" styleClass="status-meta"/>
@@ -77,3 +93,6 @@
         </BorderPane>
     </center>
 </BorderPane>
+<ChromeContour fx:id="chromeContour" managed="false"/>
+<Label text="◢" StackPane.alignment="BOTTOM_RIGHT" styleClass="window-resize" onMousePressed="#beginResize" onMouseDragged="#resizeWindow" accessibleText="Drag to resize window"/>
+</StackPane>

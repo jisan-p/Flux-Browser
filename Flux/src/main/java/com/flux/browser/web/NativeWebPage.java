@@ -27,6 +27,7 @@ public final class NativeWebPage extends BrowserPage {
     private static boolean lastHttps, lastPhishing;
     private static CompletableFuture<String> lastPrivacy;
     public java.util.function.Consumer<String> openUrl = u -> {};
+    public java.util.function.Consumer<String> pageAction = value -> {};
     public final javafx.beans.property.ReadOnlyBooleanWrapper pdf = new javafx.beans.property.ReadOnlyBooleanWrapper();
     public static void downloadListener(java.util.function.Consumer<String> listener) { downloadListener = listener; }
     public static CompletableFuture<String> configurePrivacy(String rules, boolean https, boolean phishing) {
@@ -48,6 +49,28 @@ public final class NativeWebPage extends BrowserPage {
         if (closed) return;
         if (name.equals("pdfOpen")) { pdf.set(true); state.set(Worker.State.SCHEDULED); }
         command(id,name,value);
+    }
+    /** Opens WebKit's inspector lazily; completion/error arrives through the existing FX callback bridge. */
+    public CompletableFuture<String> developerTools(String operation) {
+        if (closed) return CompletableFuture.failedFuture(new IllegalStateException("Tab closed"));
+        if (pdf.get()) return CompletableFuture.failedFuture(new IllegalStateException("Developer Tools inspect web pages, not PDF documents."));
+        if (!Set.of("show", "console", "toggle", "close", "status").contains(operation))
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Unknown Developer Tools action"));
+        long token = ++request;
+        var result = new CompletableFuture<String>(); scripts.put(token,result);
+        inspect(id,token,operation);
+        result.orTimeout(20,TimeUnit.SECONDS).whenComplete((v,e) -> Platform.runLater(() -> scripts.remove(token)));
+        return result;
+    }
+    /** Desktop test hook for the inspector's own frontend, never another application's view. */
+    public CompletableFuture<String> inspectorFrontendForTesting(String script) {
+        if (!Boolean.getBoolean("flux.testInput")) throw new IllegalStateException("Test input disabled");
+        if (closed) return CompletableFuture.failedFuture(new IllegalStateException("Tab closed"));
+        long token = ++request;
+        var result = new CompletableFuture<String>(); scripts.put(token,result);
+        inspectFrontend(id,token,script);
+        result.orTimeout(20,TimeUnit.SECONDS).whenComplete((v,e) -> Platform.runLater(() -> scripts.remove(token)));
+        return result;
     }
     public CompletableFuture<String> keychain(String operation, String origin, String user, char[] password) {
         if (closed) return CompletableFuture.failedFuture(new IllegalStateException("Tab closed"));
@@ -179,6 +202,7 @@ public final class NativeWebPage extends BrowserPage {
             if (p == null) { if (kind.equals("popup")) destroy(token); return; }
             switch (kind) {
                 case "openURL" -> p.openUrl.accept(value);
+                case "pageAction" -> p.pageAction.accept(value);
                 case "document" -> p.pdf.set(token != 0);
                 case "url" -> p.location.set(value);
                 case "title" -> p.title.set(value);
@@ -198,6 +222,17 @@ public final class NativeWebPage extends BrowserPage {
             }
         });
     }
+    /** Exercises the actual AppKit menu; cannot post input to another application. */
+    public CompletableFuture<String> contextMenuForTesting(String operation, String value) {
+        if (!Boolean.getBoolean("flux.testInput")) throw new IllegalStateException("Test input disabled");
+        if (closed) return CompletableFuture.failedFuture(new IllegalStateException("Tab closed"));
+        long token = ++request;
+        var result = new CompletableFuture<String>(); scripts.put(token, result);
+        contextMenuTest(id, token, operation, value);
+        result.orTimeout(15, TimeUnit.SECONDS).whenComplete((v,e) -> Platform.runLater(() -> scripts.remove(token)));
+        return result;
+    }
+    private static native void contextMenuTest(long id, long token, String operation, String value);
     /** Desktop test hook: posts inside this application's AppKit event queue, never to other apps. */
     public void postShortcutForTesting(String key) {
         if (!Boolean.getBoolean("flux.testInput")) throw new IllegalStateException("Test input is disabled");
@@ -220,6 +255,8 @@ public final class NativeWebPage extends BrowserPage {
     private static native void configureServices(long token, String rules, boolean https, boolean phishing);
     private static native void serviceAction(long id, String action);
     private static native void credential(long id, long token, String operation, String origin, String user, char[] password);
+    private static native void inspectFrontend(long id, long token, String script);
+    private static native void inspect(long id, long token, String operation);
     private static native void create(long id, long window);
     private static native void attach(long id, long window);
     private static native void frame(long id, double x, double y, double width, double height, boolean visible);

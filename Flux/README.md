@@ -1,8 +1,12 @@
 # Flux Browser
 
-A Java 21+ desktop browser with an Opera GX-inspired carbon/magenta/cyan interface, native macOS WebKit rendering (JavaFX WebView on other platforms), and asynchronous PostgreSQL storage. The JavaFX interface and native-page viewport are defined in FXML with dedicated controllers; WebKit supplies webpage rendering and native page dialogs.
+A Java 21+ macOS browser with an Opera GX-inspired carbon/magenta/cyan interface, native WebKit rendering, and asynchronous PostgreSQL storage. The JavaFX interface and native-page viewport are defined in FXML with dedicated controllers; WebKit supplies webpage rendering and native page dialogs.
 
-![Flux Speed Dial running in JavaFX](docs/images/flux-speed-dial.png)
+**Version 1 targets macOS.** Windows/Linux support is deferred to a later version. The JavaFX compatibility engine, its resources, dependencies and diagnostic profiles remain in the repository for that work; the v1 application entry point requires native macOS WebKit.
+
+![Flux Mac start page](docs/images/flux-gx-home.png)
+
+The **Easy Setup** sliders icon opens persistent themes, wallpapers, fonts, layout, sound controls and saved presets. See [Customization](docs/CUSTOMIZATION.md) for supported controls and differences from Opera GX.
 
 ## 1. Architectural blueprint and MVP matrix
 
@@ -18,7 +22,7 @@ The complete [pom.xml](pom.xml) targets Java 21 and configures:
 | --- | --- | --- |
 | `javafx-controls` | 21.0.12 | Controls, layouts, CSS, and input |
 | `javafx-fxml` | 21.0.12 | FXML loading and controller injection |
-| `javafx-web` | 21.0.12 | Compatibility engine on non-macOS or `-Dflux.engine=javafx` |
+| `javafx-web` | 21.0.12 | Retained compatibility engine for future Windows/Linux work |
 | `gson` | 2.13.2 | Local session settings, declarative search providers, and native service messages |
 | `postgresql` | 42.7.13 | JDBC storage |
 | `javafx-maven-plugin` | 0.0.8 | `mvn javafx:run`, including native JavaFX dependencies |
@@ -29,7 +33,7 @@ On JDK 24 and later, the automatically activated `modern-jdk` Maven profile sele
 
 On macOS, Flux now uses **WKWebView**, the system WebKit engine, inside the JavaFX window. This replaces JavaFX WebView for everyday browsing on your M3. WebKit manages its web-content/network/GPU processes; page JavaScript and video no longer render through JavaFX's WebView pipeline. Native calls enqueue asynchronously in AppKit and JavaFX; neither path waits for page-script execution. The bridge builds automatically using **Xcode Command Line Tools** (`xcode-select --install` if missing), supports macOS 12+, and packages the library for the running JDK's architecture. Use `mvn javafx:run` as before. To open a page at launch: `mvn javafx:run -Djavafx.args="--url=https://github.com/"`. System WebKit updates come with macOS.
 
-JavaFX uses Metal for the **shell** on macOS with JDK 24+, with ES2/software fallbacks. On older JDKs the shell uses software rendering. This setting does not control WKWebView's compositor. The earlier software-default choice came from a synthetic JavaFX WebView test; subsequent media/site tests exposed its limits and prompted the native-engine replacement. To compare the old engine explicitly: `mvn -Dflux.engine=javafx javafx:run`. See [VERIFICATION.md](docs/VERIFICATION.md) for measurements and limitations.
+JavaFX uses Metal for the **shell** on macOS with JDK 24+, with ES2/software fallbacks. On older JDKs the shell uses software rendering. This setting does not control WKWebView's compositor. The earlier software-default choice came from a synthetic JavaFX WebView test; subsequent media/site tests exposed its limits and prompted the native-engine replacement. The old engine remains available to diagnostic test launchers using `-Dflux.engine=javafx`; the v1 application launcher requires native WebKit. See [VERIFICATION.md](docs/VERIFICATION.md) for measurements and limitations.
 
 Shell diagnostics are opt-in: `mvn -Dflux.showFps=true javafx:run` displays JavaFX rendering statistics. `-Dflux.fullspeed=true` enables an uncapped diagnostic run; normal launches leave it **false** because it disables JavaFX VSync and does not accelerate WKWebView video. The shell counter is not a webpage/video FPS measurement.
 
@@ -92,11 +96,11 @@ If PostgreSQL is unavailable, Flux still opens and browses. The footer reports *
 
 The complete UI lives in [src/main/resources/com/flux/browser/view](src/main/resources/com/flux/browser/view), with the shared [style.css](src/main/resources/com/flux/browser/style.css). The UI uses the specified carbon palette with magenta/cyan accents, SVGPath artwork, a thin sidebar, custom tab chips, and native FXML home/library/settings screens.
 
-The extensive [Scene Builder guide](docs/UI_SCENEBUILDER_GUIDE.md) documents all 15 FXML/controller pairs, injected fields, action handlers, runtime bindings, and safe live-demo edits. Dynamic rows and tiles also have standalone FXML templates.
+The extensive [Scene Builder guide](docs/UI_SCENEBUILDER_GUIDE.md) documents all 16 FXML/controller pairs, injected fields, action handlers, runtime bindings, and safe live-demo edits. Dynamic rows and tiles also have standalone FXML templates.
 
 ## 5. Controller and engine wiring
 
-[BrowserController.java](src/main/java/com/flux/browser/controller/BrowserController.java) manages the shell and coalesces page-event bursts into one toolbar update per FX pulse. [WebTabController.java](src/main/java/com/flux/browser/controller/WebTabController.java) owns an engine-neutral `BrowserPage`. First navigation creates `NativeWebPage` with `NativeWebContent.fxml` on macOS, or `JavaFxPage` with `WebContent.fxml` elsewhere. Blank Speed Dial tabs allocate no browser engine.
+[BrowserController.java](src/main/java/com/flux/browser/controller/BrowserController.java) manages the shell and coalesces page-event bursts into one toolbar update per FX pulse. [WebTabController.java](src/main/java/com/flux/browser/controller/WebTabController.java) owns an engine-neutral `BrowserPage`. In v1, first navigation creates `NativeWebPage` with `NativeWebContent.fxml`. The `JavaFxPage` / `WebContent.fxml` implementation remains available for future platform development. Blank Speed Dial tabs allocate no browser engine.
 
 Home retains the last page for Back and pauses its media. Switching tabs or opening library/settings hides the native viewport while retaining the document. Closing a tab releases its WKWebView, observers, pending script requests, and input handlers. Native popups preserve their WebKit configuration and opener; navigation, title, progress, zoom, file selection, JavaScript dialogs, and shell keyboard shortcuts are bridged. TLS certificate validation remains the system default. On macOS 14+, a stable Flux-specific website data store shares cookies/cache across Flux tabs and restarts, independently of PostgreSQL. Older macOS uses WebKit's default persistent store. Existing JavaFX-engine cookies are not migrated.
 
@@ -111,10 +115,11 @@ The Java heap limit is separate from WebKit helper-process memory. WebKit decide
 | Back / forward / home | Alt+Left / Alt+Right / Alt+Home |
 | Reload | Ctrl/Cmd+R or F5 |
 | Stop loading / dismiss shell panel | Escape |
+| Developer Tools / Console | F12 or Option+Cmd+I / Option+Cmd+C |
 | Toggle bookmark | Ctrl/Cmd+D |
 | History / bookmarks | Ctrl/Cmd+Y / Ctrl/Cmd+Shift+B |
 
-Drag the empty title-strip area to move the window; double-click it to maximize/restore. The bottom-right grip resizes the window. Accent selection lasts for the session; zoom belongs to the current tab. Tabs, their zoom levels, and workspaces restore across app restarts when enabled in Tools; only the selected tab loads immediately.
+Drag the empty title-strip area to move the window; double-click it to maximize/restore. The bottom-right grip resizes the window. Appearance and named presets persist on this Mac; zoom belongs to the current tab. Tabs, their zoom levels, and workspaces restore across app restarts when enabled in Tools; only the selected tab loads immediately.
 
 ## 6. Build, verification, and presentation
 
@@ -159,6 +164,6 @@ Native WKWebView supports substantially more web/media APIs than JavaFX WebView,
 | Storage offline | PostgreSQL service, host/port, database/role existence, password, and environment overrides; then reconnect in Settings. |
 | Homebrew `initdb` cannot find `postgres` | `libpq` supplies client utilities. Use the binaries under the full `postgresql@18` installation. |
 | Maven native-library error | JDK and JavaFX CPU architectures must agree. Let Maven choose native artifacts; do not manually copy another platform's JARs. |
-| App has no display | Run it in a desktop session. Linux automation needs a display server such as Xvfb. |
+| App has no display | Run v1 in a macOS desktop session. Other platforms are deferred. |
 | FXML edit does not appear | Edit `src/main/resources`, stop the app, and run `mvn javafx:run` again. `target/classes` is generated output. |
 | Scene Builder shows no dynamic tiles/rows | Open `DialTile.fxml` or `LibraryRow.fxml` separately. Controllers populate their containers only at runtime. |

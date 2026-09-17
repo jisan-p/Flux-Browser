@@ -17,6 +17,7 @@
         <flux.maxHeap>1024m</flux.maxHeap>
         <flux.fullspeed>false</flux.fullspeed>
         <flux.showFps>false</flux.showFps>
+        <flux.consoleLogging>false</flux.consoleLogging>
         <flux.engine>native</flux.engine>
         <flux.mainClass>com.flux.browser/com.flux.browser.FluxBrowser</flux.mainClass>
     </properties>
@@ -71,6 +72,8 @@
                         <option>--add-exports=javafx.graphics/com.sun.javafx.stage=com.flux.browser</option>
                         <option>--add-exports=javafx.graphics/com.sun.javafx.tk=com.flux.browser</option>
                         <option>-Dflux.engine=${flux.engine}</option>
+                        <option>-Dflux.consoleLogging=${flux.consoleLogging}</option>
+                        <option>--add-exports=javafx.web/com.sun.javafx.webkit=com.flux.browser</option>
                         <option>-Xms64m</option>
                         <option>-Xmx${flux.maxHeap}</option>
                         <option>-Dprism.order=${flux.rendering}</option>

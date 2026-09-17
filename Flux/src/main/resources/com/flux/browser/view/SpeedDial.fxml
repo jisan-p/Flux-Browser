@@ -1,50 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.shape.SVGPath?>
+<?import javafx.scene.control.*?><?import javafx.scene.layout.*?>
 <ScrollPane fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.SpeedDialController"
-            fitToWidth="true" hbarPolicy="NEVER" styleClass="home-scroll" stylesheets="@../style.css">
-    <content>
-        <VBox alignment="TOP_CENTER" styleClass="home-background">
-            <VBox maxWidth="1050" spacing="18" styleClass="home-content">
-                <HBox alignment="CENTER_LEFT" spacing="14">
-                    <Label text="FLUX / START" styleClass="eyebrow"/>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <Label fx:id="clockLabel" text="20:24" styleClass="home-clock"/>
-                    <Label fx:id="dateLabel" text="FRIDAY, SEPTEMBER 11" styleClass="status-meta"/>
-                </HBox>
-                <HBox alignment="CENTER_LEFT" spacing="20">
-                    <VBox spacing="8" HBox.hgrow="ALWAYS">
-                        <Label text="Your internet." styleClass="hero-title"/>
-                        <Label text="In full color." styleClass="hero-title,accent-text"/>
-                        <Label text="A fresh tab. An open world. Make it yours." styleClass="hero-subtitle" wrapText="true"/>
-                    </VBox>
-                    <StackPane minWidth="200" prefWidth="230" maxWidth="230" prefHeight="160" styleClass="hero-art" mouseTransparent="true">
-                        <SVGPath content="M 12 0 L 126 0 L 108 30 L 42 30 L 30 58 L 99 58 L 80 88 L 18 88 L 0 130 L -34 130 Z" styleClass="hero-outline" rotate="-10" translateX="12" translateY="9"/>
-                        <SVGPath content="M 12 0 L 126 0 L 108 30 L 42 30 L 30 58 L 99 58 L 80 88 L 18 88 L 0 130 L -34 130 Z" styleClass="hero-mark" rotate="-10"/>
-                    </StackPane>
-                </HBox>
-                <HBox alignment="CENTER_LEFT" spacing="14" styleClass="home-search">
-                    <Label text="⌕" styleClass="search-symbol"/>
-                    <TextField fx:id="searchField" promptText="Where do you want to go?" onAction="#search" HBox.hgrow="ALWAYS" styleClass="home-search-input" accessibleText="Search or enter a website"/>
-                    <Button text="Explore ↗" onAction="#search" styleClass="primary-button"/>
-                </HBox>
-                <VBox spacing="12">
-                    <HBox alignment="CENTER_LEFT" spacing="10">
-                        <Label text="SPEED DIAL" styleClass="section-heading"/>
-                        <Label fx:id="dialCount" text="06" styleClass="count-badge"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Button fx:id="addDialButton" text="+  Add a site" onAction="#add" styleClass="text-button"/>
-                    </HBox>
-                    <TilePane fx:id="tiles" prefColumns="3" prefTileWidth="282" prefTileHeight="98" hgap="14" vgap="14"/>
-                    <Label fx:id="dialNote" text="Your favorite places, one click away." styleClass="muted" wrapText="true"/>
-                </VBox>
-                <HBox alignment="CENTER_LEFT" spacing="12" styleClass="home-footer">
-                    <Label text="LESS NOISE. MORE INTERNET." styleClass="footer-motto"/>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <Label text="⌘ / Ctrl + L  ·  Find your next destination" styleClass="status-meta"/>
-                </HBox>
-            </VBox>
-        </VBox>
-    </content>
+ fitToWidth="true" hbarPolicy="NEVER" styleClass="home-scroll" stylesheets="@../style.css" onContextMenuRequested="#contextMenu">
+<fx:define><ContextMenu fx:id="homeMenu" styleClass="gx-context-menu"><items>
+<MenuItem fx:id="addMenuItem" text="Add a Site" onAction="#add"/><MenuItem text="Reload Speed Dial" onAction="#reloadDials"/>
+<SeparatorMenuItem/><MenuItem text="Easy Setup" onAction="#customize"/><MenuItem text="Settings" onAction="#settings"/>
+</items></ContextMenu></fx:define>
+ <content><VBox fx:id="background" alignment="TOP_CENTER" styleClass="home-background">
+  <VBox fx:id="homeContent" alignment="TOP_CENTER" maxWidth="1160" spacing="36" styleClass="home-content">
+   <HBox fx:id="clockRow" alignment="CENTER" spacing="16"><Label fx:id="clockLabel" styleClass="home-clock"/><Label fx:id="dateLabel" styleClass="status-meta"/></HBox>
+   <HBox fx:id="searchBox" alignment="CENTER_LEFT" spacing="14" maxWidth="640" styleClass="home-search">
+    <Label text="⌕" styleClass="search-symbol"/><TextField fx:id="searchField" promptText="Search the web" onAction="#search" HBox.hgrow="ALWAYS" styleClass="home-search-input" accessibleText="Search or enter a website"/>
+    <Button text="→" onAction="#search" styleClass="search-go" accessibleText="Search"/>
+   </HBox>
+   <VBox fx:id="dialSection" alignment="TOP_CENTER" spacing="12">
+    <HBox fx:id="dialHeading" alignment="CENTER_LEFT" spacing="10"><Label text="SPEED DIAL" styleClass="section-heading"/><Label fx:id="dialCount" text="06" styleClass="count-badge"/><Region HBox.hgrow="ALWAYS"/><Button fx:id="addDialButton" text="+  Add a site" onAction="#add" styleClass="text-button"/></HBox>
+    <TilePane fx:id="tiles" alignment="TOP_CENTER" prefColumns="6" prefTileWidth="144" prefTileHeight="112" hgap="18" vgap="18"/>
+    <Label fx:id="dialNote" styleClass="muted" wrapText="true"/>
+   </VBox>
+   <Region VBox.vgrow="ALWAYS"/>
+   <Button text="Customize start page" onAction="#customize" styleClass="text-button,customize-start"/>
+  </VBox>
+ </VBox></content>
 </ScrollPane>

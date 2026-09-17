@@ -200,7 +200,7 @@ public final class BrowserSmokeChecks {
             }
             shortcut(KeyCode.W); shortcut(KeyCode.W);
             BrowserChecks.equal(fx(BrowserSmokeChecks::tabCount), 1);
-            BrowserChecks.equal(fx(() -> text("addressBar").getText()), "flux://start");
+            BrowserChecks.equal(fx(() -> text("addressBar").getText()), "");
             BrowserChecks.check(uncaught.get() == null, "No uncaught JavaFX exceptions");
             System.out.println("BrowserSmokeChecks passed: FXML, WebKit navigation, tabs, popups, stop/errors, settings"
                     + (expectStorage ? ", bookmark/history/dial UI CRUD" : ", offline browsing") + ". Screenshots: target/screenshots/");

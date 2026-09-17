@@ -14,6 +14,11 @@ public final class SidebarController {
     @FXML private void history() { if (browser != null) browser.showLibrary(false); }
     @FXML private void settings() { if (browser != null) browser.settings(); }
 
+    @FXML private void downloads() { if(browser!=null)browser.featureSection("Downloads"); }
+    @FXML private void workspaces() { if(browser!=null)browser.featureSection("Workspaces"); }
+    @FXML private void tools() { if (browser != null) browser.features(); }
+    @FXML private void customize() { if (browser != null) browser.easySetup(); }
+
     public void select(String page) {
         if (page.equals(selectedPage)) return;
         selectedPage = page;

@@ -1,0 +1,144 @@
+/* Native Mac shell: compact GX reference geometry, original Flux artwork and assets. */
+.root {
+    -gx-surface: rgba(16,13,23,0.85); -gx-text: #c9c2dc; -gx-muted: #9388ac;
+    -gx-panel: #0d0b13; -gx-card: #191421; -gx-edge: #332940;
+    -fx-base: #191421; -fx-background: #0d0b13; -fx-control-inner-background: #191421;
+}
+.browser-root { -fx-background-color: transparent; -fx-border-color: transparent; -fx-border-width: 1; -fx-border-radius: 12; -fx-background-radius: 12; }
+.label { -fx-text-fill: -gx-text; }
+.muted, .status-meta { -fx-text-fill: -gx-muted; }
+.button { -fx-text-fill: -gx-text; -fx-background-radius: 4; -fx-border-radius: 4; }
+.button:hover { -fx-background-color: derive(-gx-card,22%); -fx-text-fill: -gx-text; }
+.line-icon { -fx-stroke: -gx-muted; -fx-stroke-width: 1.4; }
+.button:hover .line-icon { -fx-stroke: -flux-accent; }
+.window-rail { -fx-background-color: rgba(0,0,0,0.48); -fx-padding: 14 0 8 0; }
+.traffic-lights { -fx-padding: 1 0 15 0; }
+.traffic { -fx-min-width: 13; -fx-pref-width: 13; -fx-max-width: 13; -fx-min-height: 13; -fx-pref-height: 13; -fx-max-height: 13; -fx-padding: 0; -fx-background-radius: 20; -fx-border-radius: 20; }
+.traffic-close, .traffic-close:hover { -fx-background-color: #ff5f57; }
+.traffic-minimize, .traffic-minimize:hover { -fx-background-color: #febc2e; }
+.traffic-maximize, .traffic-maximize:hover { -fx-background-color: #28c840; }
+.traffic:hover { -fx-border-color: rgba(0,0,0,0.4); }
+.sidebar { -fx-background-color: transparent; -fx-border-width: 0; -fx-padding: 0 4 0 4; }
+.sidebar .separator { -fx-opacity: 0.35; }
+.sidebar-button { -fx-min-width: 32; -fx-pref-width: 32; -fx-min-height: 32; -fx-padding: 7; -fx-background-radius: 4; }
+.sidebar-button .line-icon { -fx-stroke: -flux-accent; }
+.sidebar-button.selected { -fx-background-color: transparent; -fx-border-width: 0; }
+.sidebar-button:hover { -fx-background-color: -gx-card; }
+.brand-button { -fx-padding: 6; -fx-scale-x: 0.7; -fx-scale-y: 0.7; }
+.sidebar-caption { -fx-font-size: 8; -fx-text-fill: -flux-accent; }
+.tab-strip { -fx-background-color: rgba(0,0,0,0.55); -fx-padding: 5 8 3 8; -fx-pref-height: 36; -fx-min-height: 36; }
+.tab-chip { -fx-background-color: transparent; -fx-background-radius: 4; -fx-border-radius: 4; -fx-border-width: 0; -fx-padding: 5 8; -fx-pref-height: 28; }
+.tab-chip:selected { -fx-background-color: derive(-flux-accent,-42%); -fx-border-color: transparent; }
+.tab-chip:selected .tab-title { -fx-text-fill: #fff2f6; }
+.tab-chip:hover { -fx-background-color: -gx-surface; }
+.tab-chip:selected:hover { -fx-background-color: derive(-flux-accent,-30%); }
+.tab-close { -fx-font-size: 14; -fx-opacity: 0; }
+.tab-chip:hover .tab-close, .tab-close:focused { -fx-opacity: 1; }
+.tab-icon { -fx-text-fill: -gx-text; -fx-font-size: 13; }
+.tab-title { -fx-text-fill: -gx-text; -fx-font-size: 12; }
+.new-tab-button { -fx-min-width: 24; -fx-min-height: 24; -fx-padding: 0 5; -fx-font-size: 19; }
+.navigation-strip { -fx-background-color: rgba(0,0,0,0.38); -fx-padding: 3 8 7 4; -fx-spacing: 3; }
+.icon-button { -fx-min-width: 28; -fx-min-height: 28; -fx-padding: 6; -fx-font-size: 13; }
+.address-box { -fx-background-color: -gx-surface; -fx-border-color: transparent; -fx-background-radius: 4; -fx-border-radius: 4; -fx-padding: 0 4 0 10; }
+.address-input, .address-input:focused { -fx-padding: 6 0; -fx-text-fill: -gx-text; -fx-prompt-text-fill: -gx-muted; }
+.scheme-label { -fx-font-size: 8; -fx-text-fill: -gx-muted; }
+.bookmark-button { -fx-font-size: 20; -fx-padding: 0 5; }
+.page-progress, .page-progress > .track { -fx-background-color: transparent; }
+.status-bar { -fx-background-color: -gx-surface; -fx-padding: 4 10; -fx-border-color: -gx-edge; }
+.window-resize { -fx-opacity: 0.5; -fx-padding: 4; -fx-font-size: 11; -fx-text-fill: -gx-muted; -fx-cursor: se-resize; }
+.web-tab, .home-scroll, .home-scroll > .viewport, .home-background, .cyan-theme .home-background { -fx-background-color: transparent; }
+.home-content { -fx-padding: 60 30 30 30; }
+.home-clock { -fx-font-size: 24; -fx-text-fill: -gx-text; }
+.home-search { -fx-background-color: linear-gradient(to bottom,-gx-surface,derive(-gx-surface,12%)); -fx-border-color: transparent transparent -gx-edge transparent; -fx-background-radius: 5; -fx-border-radius: 5; -fx-padding: 3 10 3 14; -fx-pref-height: 48; }
+.home-search-input, .home-search-input:focused { -fx-text-fill: -gx-text; -fx-prompt-text-fill: -gx-muted; -fx-font-size: 15; }
+.search-go { -fx-text-fill: -gx-muted; -fx-font-size: 20; -fx-padding: 3 8; }
+.search-symbol { -fx-font-size: 24; -fx-text-fill: -gx-muted; }
+.dial-tile { -fx-background-color: transparent; -fx-border-color: transparent; -fx-border-width: 0; -fx-padding: 0; -fx-background-radius: 5; }
+.dial-tile:hover { -fx-background-color: transparent; -fx-border-color: transparent; }
+.dial-open { -fx-padding: 8; -fx-background-radius: 5 5 18 5; -fx-border-radius: 5 5 18 5; }
+.dial-open:hover { -fx-border-color: -flux-accent; }
+.dial-monogram, .dial-tile.alternate .dial-monogram { -fx-background-color: transparent; -fx-text-fill: #faf6ff; -fx-font-size: 17; -fx-font-weight: bold; }
+.dial-title { -fx-font-size: 11; -fx-font-weight: normal; -fx-text-fill: -gx-text; -fx-alignment: center; }
+.tile-action { -fx-opacity: 0; -fx-padding: 0 3; -fx-font-size: 11; }
+.dial-tile:hover .tile-action, .tile-action:focused { -fx-opacity: 1; }
+.hide-tile-titles .dial-title { -fx-opacity: 0; }
+#dialHeading .section-heading, #dialHeading .count-badge { -fx-opacity: 0; }
+.customize-start { -fx-text-fill: -gx-muted; -fx-font-size: 11; }
+.easy-setup, .easy-setup > .viewport { -fx-background-color: -gx-panel; -fx-background-insets: 0; -fx-padding: 0; }
+.easy-setup { -fx-border-color: -gx-edge; -fx-border-width: 0 0 0 1; }
+.easy-content { -fx-padding: 15 20 30 20; }
+.easy-title { -fx-text-fill: -flux-accent; -fx-font-weight: bold; -fx-font-size: 15; }
+.section-heading { -fx-text-fill: -gx-muted; -fx-font-size: 10; }
+.easy-card { -fx-background-color: linear-gradient(to bottom,-gx-card,derive(-gx-card,-24%)); -fx-border-color: -gx-edge; -fx-background-radius: 5; -fx-border-radius: 5; -fx-padding: 16; }
+.easy-card .button { -fx-padding: 7 9; -fx-font-size: 11; }
+.theme-swatch { -fx-background-color: -gx-panel; -fx-border-color: -gx-edge; -fx-min-width: 100; -fx-min-height: 60; -fx-text-alignment: center; }
+.theme-swatch:hover, .theme-swatch:focused { -fx-border-color: -flux-accent; }
+.text-field { -fx-background-color: -gx-card; -fx-border-color: -gx-edge; -fx-background-radius: 4; -fx-border-radius: 4; -fx-text-fill: -gx-text; -fx-prompt-text-fill: -gx-muted; -fx-padding: 9 10; }
+.address-input, .home-search-input, .address-input:focused, .home-search-input:focused { -fx-background-color: transparent; -fx-border-color: transparent; }
+.check-box { -fx-text-fill: -gx-text; }
+.check-box .box { -fx-background-color: -gx-card; -fx-border-color: -gx-edge; -fx-background-radius: 3; -fx-border-radius: 3; }
+.check-box:selected .box { -fx-background-color: -flux-accent; -fx-border-color: -flux-accent; }
+.check-box:selected .mark { -fx-background-color: #fff; }
+.combo-box-base, .color-picker { -fx-background-color: -gx-card; -fx-border-color: -gx-edge; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 3; }
+.combo-box .list-cell, .combo-box-popup .list-view .list-cell { -fx-text-fill: -gx-text; -fx-background-color: -gx-card; }
+.combo-box-popup .list-view .list-cell:hover { -fx-background-color: derive(-gx-card,20%); }
+.slider .track { -fx-background-color: -gx-edge; -fx-pref-height: 4; }
+.slider .thumb { -fx-background-color: -flux-accent; -fx-pref-width: 12; -fx-pref-height: 12; }
+.slider .axis { -fx-tick-label-fill: -gx-muted; }
+.scroll-bar .thumb { -fx-background-color: -gx-edge; }
+.library-page, .settings-page, .settings-scroll, .settings-scroll > .viewport, .error-page { -fx-background-color: -gx-panel; }
+.library-row, .settings-card { -fx-background-color: -gx-card; -fx-border-color: -gx-edge; }
+.page-title { -fx-text-fill: -gx-text; -fx-font-size: 28; }
+.secondary-button { -fx-background-color: -gx-edge; -fx-border-color: transparent; }
+.no-element-backgrounds .address-box, .no-element-backgrounds .home-search { -fx-background-color: transparent; -fx-border-color: transparent; }
+.compact-layout .home-content { -fx-padding: 35 22 20 22; -fx-spacing: 20; }
+.compact-layout .tab-strip { -fx-pref-height: 32; -fx-min-height: 32; }
+.compact-layout .navigation-strip { -fx-padding: 2 6 4 3; }
+.spacious-layout .home-content { -fx-padding: 85 40 40 40; -fx-spacing: 50; }
+.spacious-layout .navigation-strip { -fx-padding: 9 12 12 8; }
+.spacious-layout .tab-strip { -fx-pref-height: 44; -fx-min-height: 44; }
+.light-theme { -gx-text: #302c3b; -gx-muted: #686071; -gx-panel: #f0edf5; -gx-card: #e4dfed; -gx-edge: #c6bdd2; -fx-base: #e4dfed; -fx-background: #f0edf5; -fx-control-inner-background: #e4dfed; }
+.light-theme .window-rail, .light-theme .tab-strip, .light-theme .navigation-strip { -fx-background-color: rgba(246,242,250,0.65); }
+.light-theme .tab-chip:selected { -fx-background-color: derive(-flux-accent,65%); }
+.light-theme .tab-chip:selected .tab-title { -fx-text-fill: #24202c; }
+
+.toast-notice { -fx-background-color: -gx-panel; -fx-text-fill: -gx-text; -fx-padding: 6 14; -fx-font-size: 11; -fx-border-color: -gx-edge; -fx-border-width: 0 0 1 0; }
+
+.theme-preview { -fx-background-color: -gx-panel; -fx-padding: 4; }
+.theme-outline { -fx-stroke: -preview-color; -fx-fill: transparent; -fx-stroke-width: 1; }
+.theme-name { -fx-font-size: 10; -fx-text-fill: -gx-text; }
+.theme-swatch:selected { -fx-border-color: -flux-accent; }
+.big-tiles .dial-open { -fx-pref-height: 110; -fx-min-height: 110; }
+.window-rail, .tab-strip, .navigation-strip { -fx-background-color: derive(-gx-surface,-50%); }
+.light-theme .window-rail, .light-theme .tab-strip, .light-theme .navigation-strip { -fx-background-color: -gx-surface; }
+.light-theme .easy-card { -fx-background-color: linear-gradient(to bottom,#f0edf5,#e4dfed); }
+
+/* Shared popup rhythm and restrained selection, including keyboard focus. */
+.context-menu { -fx-background-color: -gx-card; -fx-background-radius: 5; -fx-border-color: -gx-edge; -fx-border-radius: 5; -fx-padding: 5 0; -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.45),18,0.12,0,5); }
+.context-menu .menu-item { -fx-padding: 7 22; -fx-background-radius: 2; }
+.context-menu .menu-item .label { -fx-text-fill: -gx-text; -fx-font-size: 12; }
+.context-menu .menu-item:focused { -fx-background-color: derive(-gx-card,26%); }
+.context-menu .menu-item:disabled { -fx-opacity: 0.38; }
+.context-menu .separator { -fx-padding: 4 9; }
+.context-menu .separator .line { -fx-border-color: -gx-edge transparent transparent transparent; -fx-border-width: 1 0 0 0; }
+.tab-chip { -fx-background-radius: 3 3 5 5; }
+.tab-chip:selected .tab-close { -fx-opacity: 0.75; }
+.settings-root { -fx-background-color: -gx-panel; }
+.settings-header { -fx-padding: 35 16 28 16; -fx-background-color: linear-gradient(to bottom,derive(-gx-card,5%),-gx-panel); }
+.settings-title { -fx-font-size: 27; -fx-font-weight: normal; -fx-padding: 0 12; }
+.settings-header .button { -fx-font-size: 10; -fx-text-fill: -gx-muted; }
+.settings-navigation { -fx-padding: 10 12 24 18; }
+.settings-category { -fx-background-color: transparent; -fx-text-fill: -gx-muted; -fx-alignment: CENTER_LEFT; -fx-padding: 12 14; -fx-background-radius: 4; -fx-font-size: 12; }
+.settings-category:hover { -fx-background-color: -gx-card; }
+.settings-category:selected { -fx-background-color: -gx-card; -fx-text-fill: -flux-accent; -fx-border-color: -flux-accent; -fx-border-width: 0 0 0 2; }
+.settings-body { -fx-padding: 10 30 40 20; }
+.settings-card { -fx-padding: 24; -fx-background-radius: 6; -fx-border-radius: 6; }
+.settings-card .setting-title { -fx-font-size: 16; -fx-font-weight: normal; }
+.settings-card .section-heading { -fx-font-size: 12; }
+.settings-card .separator { -fx-opacity: 0.45; }
+.button:focused { -fx-border-color: -flux-accent; }
+
+.settings-theme { -fx-background-color: -gx-panel; -fx-border-color: -gx-edge; -fx-padding: 12 10; -fx-font-size: 10; -fx-min-width: 110; }
+.settings-theme:selected { -fx-border-color: -flux-accent; }
+.mode-choice { -fx-background-color: -gx-panel; -fx-text-fill: -gx-muted; -fx-padding: 10 20; -fx-background-radius: 3; }
+.mode-choice:selected { -fx-background-color: -gx-edge; -fx-text-fill: -gx-text; }

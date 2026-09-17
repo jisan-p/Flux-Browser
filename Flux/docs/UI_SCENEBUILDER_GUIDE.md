@@ -1,6 +1,6 @@
 # Flux UI and Scene Builder field guide
 
-This guide covers all 15 FXML views and their dedicated controllers. It is designed for a live demonstration in which you open the actual layout, explain the Java binding, change a visual property, and relaunch the app.
+This guide covers all 16 FXML views and their dedicated controllers. It is designed for a live demonstration in which you open the actual layout, explain the Java binding, change a visual property, and relaunch the app.
 
 ## 1. Open the correct files
 
@@ -42,17 +42,18 @@ Runtime dependencies arrive separately through `configure(...)`. This keeps FXML
 | `LibraryRow.fxml` | `LibraryRowController` | One bookmark or visit row | LibraryController's ListCell |
 | `Features.fxml` | `FeaturesController` | Workspaces, privacy, search, passwords, downloads and page tools | Included by BrowserWindow |
 | `Reader.fxml` | `ReaderController` | Extracted article text, font size and original-page action | Reader mode action |
+| `EasySetup.fxml` | `EasySetupController` | Live appearance controls, local media and named presets | BrowserController; Home overlay or native-page side panel |
 | `Settings.fxml` | `SettingsController` | Theme, current-tab zoom, storage connection | Included by BrowserWindow |
 | `EntryDialog.fxml` | `EntryDialogController` | Add/edit bookmark or shortcut | `Dialogs.edit` |
 | `MessageDialog.fxml` | `MessageDialogController` | Confirmation, webpage alert, or webpage prompt | `Dialogs.confirm/alert/prompt` |
 
 ## 4. BrowserWindow.fxml → BrowserController.java
 
-The outer `BorderPane` (`root`) holds the included sidebar on the left and another BorderPane in the center. That inner pane has a VBox of tab/navigation controls at the top, a content StackPane in the center, and an HBox status bar at the bottom.
+The outer `StackPane` (`root`) contains an FXML-declared `WallpaperCanvas`, the `shell` BorderPane, and a resize grip. The shell holds a 46-pixel left rail with vertical Mac window controls and the included sidebar. Its center contains tab/navigation controls, the content layout, and an optional status bar. `gx.css` overrides the retained base stylesheet at runtime. The canvas is original background artwork, not a browser engine; it redraws on size/appearance changes only.
 
-The tab strip is an HBox containing `tabScroll`, the `tabHeaders` HBox inside its ScrollPane, the `newTabButton`, an empty draggable title area, and three window-control buttons. The empty `tabHeaders` preview is intentional: `createTab()` loads a `TabHeader.fxml` instance and a `WebTab.fxml` instance together. The Java `Tab` record retains both roots and both controllers. All tab roots stay in `tabHost` until closed; only the selected root is visible and managed. Switching tabs therefore preserves the WebView's scene association instead of detaching and reattaching it.
+The tab strip is an HBox containing `tabScroll`, the `tabHeaders` HBox inside its ScrollPane, the `newTabButton`, an empty draggable title area, while window controls remain in the left rail. The empty `tabHeaders` preview is intentional: `createTab()` loads a `TabHeader.fxml` instance and a `WebTab.fxml` instance together. The Java `Tab` record retains both roots and both controllers. All tab roots stay in `tabHost` until closed; only the selected root is visible and managed. Switching tabs therefore preserves the WebView's scene association instead of detaching and reattaching it.
 
-The navigation HBox contains `backButton`, `forwardButton`, `reloadButton`, `stopButton`, the Home button, the address box, and Settings. The address box groups `schemeLabel`, `addressBar`, and `bookmarkButton`. SVGPath graphics keep navigation icons sharp without an icon-font dependency. `loadProgress` uses the active engine's estimated progress and becomes zero when idle.
+The navigation HBox contains `backButton`, `forwardButton`, `reloadButton`, `stopButton`, the Home button, the address box, Tools, and Easy Setup. Reload and Stop occupy the same slot. Home leaves the address input empty. The address box groups `schemeLabel`, `addressBar`, and `bookmarkButton`. SVGPath graphics keep navigation icons sharp without an icon-font dependency. `loadProgress` uses the active engine's estimated progress and becomes zero when idle.
 
 The content StackPane contains `tabHost`, the included `library`, and the included `settings`. Library and Settings start with both `visible="false"` and `managed="false"`. BrowserController reveals only the desired panel and hides the selected tab's rendering while a panel covers it. Dismissing the panel restores the same page.
 
@@ -74,19 +75,19 @@ The content StackPane contains `tabHost`, the included `library`, and the includ
 
 ## 5. Sidebar.fxml → SidebarController.java
 
-The sidebar is a fixed-width VBox with the Flux SVG mark, a separator, three navigation buttons, a growing spacer, the GX caption, and Settings at the bottom. `VBox.vgrow="ALWAYS"` on the spacer keeps Settings anchored to the bottom as the window grows.
+The sidebar is a 46-pixel VBox with the Flux SVG mark, Home, downloads, bookmarks, history, browser tools, Settings and customization actions. `VBox.vgrow="ALWAYS"` on the spacer keeps Settings anchored to the bottom as the window grows.
 
 Injected buttons are `homeButton`, `bookmarksButton`, `historyButton`, and `settingsButton`. Their `#home`, `#bookmarks`, `#history`, and `#settings` handlers delegate to BrowserController after `configure` supplies it. `select(String)` removes the `selected` style class from the rail buttons and adds it to the matching destination. When browsing a website, none of the section icons is selected.
 
 Each icon button has an accessible label and tooltip. `.sidebar-button.selected` paints a translucent accent background and left border, and changes the SVG stroke color.
 
-**Safe live edit:** change the VBox spacing or the `.sidebar` padding. If changing the rail width, edit its min/pref/max widths together. Change the decorative Flux SVGPath without touching its action. The GX label is decorative text, not a CPU/RAM indicator.
+**Safe live edit:** change the VBox spacing or the `.sidebar` padding. If changing the rail width, edit its min/pref/max widths together. Change the decorative Flux SVGPath without touching its action. The Flux label is decorative text, not a CPU/RAM indicator.
 
 ## 6. TabHeader.fxml → TabHeaderController.java
 
 Each tab chip is an HBox with a small StackPane (home mark and loading spinner), `titleLabel`, and `closeButton`. Its preferred width is 190; the title ellipsizes instead of forcing the entire strip wider. The tooltip exposes the full page title and address.
 
-`configure` binds `titleLabel.textProperty()` to the corresponding WebTab's title. The spinner follows `loadingProperty`; the icon follows the inverse. `titleTooltip` binds to the full title plus URL. The accessible text on the close button includes the tab title. `selected(boolean)` applies the **`:selected` pseudo-class**, which paints the tab's accent underline.
+`configure` binds `titleLabel.textProperty()` to the corresponding WebTab's title. The spinner follows `loadingProperty`; the icon follows the inverse. `titleTooltip` binds to the full title plus URL. The accessible text on the close button includes the tab title. `selected(boolean)` applies the **`:selected` pseudo-class**, which paints the selected tab with the current accent color.
 
 `#clicked` selects on a primary click and closes on a middle click. `#close` invokes the supplied close action. Closing the final tab causes BrowserController to create a fresh Speed Dial. `dispose()` unbinds properties and removes callbacks when a tab closes.
 
@@ -117,7 +118,7 @@ The `viewport` StackPane has ID `nativeWebView`. It defines the webpage rectangl
 
 ## 8. WebContent.fxml → WebContentController.java
 
-Used by the compatibility engine (`-Dflux.engine=javafx`), this component is a single `WebView` root with `fx:id="webView"`. `WebContentController` receives it through `@FXML` and exposes it with `view()`. It has no navigation handlers or persistence dependencies; WebTabController owns that behavior after loading the component.
+Preserved for future Windows/Linux work and compatibility test launchers (`-Dflux.engine=javafx`), this component is a single `WebView` root with `fx:id="webView"`. `WebContentController` receives it through `@FXML` and exposes it with `view()`. It has no navigation handlers or persistence dependencies; WebTabController owns that behavior after loading the component.
 
 Open this file separately in Scene Builder to inspect the WebView. It is intentionally absent from the initial WebTab preview. Keep the WebView as the root and keep its ID and controller unchanged: WebTabController uses that same node for visibility, focus, zoom, and disposal. No website is loaded by the FXML alone.
 
@@ -125,25 +126,25 @@ Open this file separately in Scene Builder to inspect the WebView. It is intenti
 
 ## 9. SpeedDial.fxml → SpeedDialController.java
 
-The root ScrollPane fits its content to width and disables horizontal scrolling. Its content is a centered VBox with a maximum width, padding, and a dark CSS background. This keeps the composition centered on a large display while allowing vertical scrolling in a smaller window.
+The root ScrollPane fits its content to width and disables horizontal scrolling. Its content is a centered VBox with a maximum width and padding over the shared procedural wallpaper. This keeps the composition centered on a large display while allowing vertical scrolling in a smaller window.
 
-The layout has five main sections: the FLUX/START caption and clock row; a hero row with text and decorative SVG artwork; the native search field; the Speed Dial heading/tile area; and a small footer. `clockLabel` and `dateLabel` update immediately when Home becomes active and every minute while visible. `setActive(false)` stops the Timeline for hidden tabs, shell panels, and minimized windows; disposal stops it permanently.
+The layout contains an optional clock/date row, a centered search box, the Speed Dial grid and a customization action. `clockLabel` and `dateLabel` update when Home becomes active; the minute timer only runs when the clock is enabled and Home is active. `setActive(false)` stops the Timeline for hidden tabs, shell panels, and minimized windows; disposal stops it permanently.
 
-`searchField` and the Explore button both call `#search`, which uses the same browser URL resolver as the top omnibox. `addDialButton` calls `#add`, which opens the FXML entry editor. `tiles` is a TilePane populated from the DAO. Its preferred columns, tile dimensions, and gaps are FXML layout properties; it wraps when the window narrows.
+`searchField` and the arrow button both call `#search`, which uses the same browser URL resolver as the top omnibox. `addDialButton` calls `#add`, which opens the FXML entry editor. `tiles` is a TilePane populated from the DAO. Its preferred columns, tile dimensions, and gaps are FXML layout properties; it wraps when the window narrows.
 
 `refresh()` marks the shortcut data dirty. `loadIfNeeded()` reads asynchronously only when Home is active and no query is already pending. Hidden Homes defer the work until shown; a completion for a newly hidden Home is discarded and marked for refresh. Before storage connects, or if it is offline, the active Home renders the six read-only starter destinations and an explanatory `dialNote`. A request number discards stale async responses. When saved shortcuts are loaded, the redundant note is hidden; an empty persisted list displays an invitation to add the first site. The DAO never reseeds a table simply because it became empty.
 
 `render(...)` returns immediately for unchanged data. Otherwise it reuses nodes for unchanged shortcut records, loads `DialTile.fxml` only for new or changed records, updates the TilePane order and `dialCount`, and releases removed entries from its cache. Scene Builder's home preview does not show database tiles; open the tile FXML separately to design one.
 
-**Best live edit:** change the static hero subtitle “A fresh tab. An open world. Make it yours.” to your own sentence, save, and relaunch. The controller does not overwrite it. The headline, SVG artwork, hero spacing, and `.home-content` padding are also easy cosmetic examples. In contrast, editing the preview clock/count does not survive controller initialization.
+**Best live edit:** adjust `.home-content` padding or the search box styling in `gx.css`. Easy Setup applies tile sizing, column limits and visibility at runtime, so those preferences take precedence over preview values.
 
 ## 10. DialTile.fxml → DialTileController.java
 
-One tile is a VBox containing a large `openButton` with an HBox graphic, followed by a footer HBox. The graphic has `monogram` and `titleLabel`; the footer has `domainLabel`, `editButton`, and `deleteButton`. Open/edit/delete are separate buttons so editing a shortcut does not also navigate.
+One tile is a VBox containing a large `openButton` with a centered wordmark graphic, followed by a caption/action HBox. The graphic uses `monogram` for the site name; the footer contains `titleLabel`, `editButton` and `deleteButton`. The readable host is retained in a hidden `domainLabel`. Open/edit/delete are separate buttons so editing a shortcut does not also navigate.
 
-`configure` copies the record's title, first Unicode code point, and readable host into labels. It applies the `alternate` style to every other position for a second accent. Negative IDs denote read-only launch shortcuts, so their edit/delete buttons are disabled. Positive database IDs support `#edit` and `#delete`; `#open` routes the saved address through BrowserController.
+`configure` copies the record's title and readable host into labels, selects a deterministic card color from its host, and attaches optional short hover effects. It applies the `alternate` style to every other position for a second accent. Negative IDs denote read-only launch shortcuts, so their edit/delete buttons are disabled. Positive database IDs support `#edit` and `#delete`; `#open` routes the saved address through BrowserController.
 
-The tile's title, host, and letter are data-driven. The visual structure is entirely FXML, including the Button's graphic. Java assigns values and callbacks rather than building the layout programmatically.
+The tile's title, host and wordmark are data-driven. The visual structure is entirely FXML, including the Button's graphic. Java assigns values and callbacks rather than building the layout programmatically.
 
 **Safe live edit:** change the monogram background radius, tile border radius, title font, or VBox padding. Keep the preferred tile dimensions consistent with `SpeedDial.fxml`'s TilePane. A very long site name will ellipsize within its available space.
 
@@ -171,9 +172,9 @@ Bookmarks display a star, folder/category, and creation time. History rows displ
 
 ## 13. Settings.fxml → SettingsController.java
 
-The settings ScrollPane contains a VBox with a caption/dismiss row, page heading, an appearance card, a storage card, and a small version line. Cards use CSS backgrounds and borders; the controls are ordinary JavaFX Buttons, Slider, Labels, and Separators.
+The settings BorderPane contains a header, category ToggleButtons, and a scrolling card column. Search filters the cards using their userData keywords. FXML theme preview buttons and Light/Auto/Dark toggles update the shared appearance model; other categories expose existing tools and storage actions. Cards use CSS backgrounds and borders.
 
-`magentaButton` and `cyanButton` call `#magenta` and `#cyan`. The controller asks BrowserController to add/remove the `cyan-theme` class on the scene root. Selected accent buttons receive a `:selected` pseudo-class. These are session preferences; no hidden settings database or file is created.
+`magentaButton` and `cyanButton` call `#magenta` and `#cyan`. The controller asks BrowserController to add/remove the `cyan-theme` class on the scene root. Selected accent buttons receive a `:selected` pseudo-class. These controls now update the persistent appearance object in the existing session file. The Easy Setup panel exposes the complete appearance controls.
 
 `zoomSlider` ranges from 75 to 150 percent. Its listener updates `zoomLabel` and the current tab's zoom. On a blank tab, the value is stored without allocating a WebView and applied on first navigation. When the panel opens, `show(zoom)` copies the tab's existing zoom while an `updating` flag prevents that synchronization from writing back unnecessarily. `#resetZoom` restores 100 percent.
 
@@ -234,8 +235,26 @@ The automated `ui-check` Maven profile loads the actual FXML, drives real WebKit
 
 `Features.fxml` is included as `features` in BrowserWindow; its controller is injected as `featuresController`. The Tools button invokes `BrowserController.features()`, hides the native page, and refreshes settings into five standard TabPane sections. Workspace selection has a separate **Switch workspace** button, so **Move current tab here** uses the chosen destination without switching first. `restore`, `focus`, `blocker`, `https`, `phishing`, and `fullText` bind through explicit action handlers.
 
-`language` selects the target for **Translate page ↗**. `readerButton` opens an owned Reader window after asynchronous extraction. `passwordProvider`, `loginUser`, and `loginPassword` supply explicit password actions; the password field is cleared when the panel opens and immediately after saving. The downloads ListView shows status and byte progress, with user-triggered cancel/reveal/PDF actions. Editing Tab captions, spacing, and preferred list heights is safe in Scene Builder; keep action names and IDs intact.
+`language` in Search selects the preferred translation language. On macOS, Reader, Translate, selected-text Search and Save Page live in the native webpage menu. `compatibilityPageTools` retains Reader and Translate FXML buttons for the future JavaFX engine; it is hidden and unmanaged on macOS. `passwordProvider`, `loginUser`, and `loginPassword` supply explicit password actions; the password field is cleared when the panel opens and immediately after saving. The downloads ListView shows status and byte progress, with user-triggered cancel/reveal/PDF actions. Editing Tab captions, spacing, and preferred list heights is safe in Scene Builder; keep action names and IDs intact.
 
 `Reader.fxml` contains heading/byline labels, a scrolling article label, font-size buttons and **Open original**. Its controller renders Readability's text content, avoiding active HTML inside the reader. Adjust the label padding or font size in FXML and preserve `title`, `byline`, and `article`.
 
 BrowserWindow's `documentBar` holds FXML PDF page and zoom buttons. It is managed only while a PDF is selected and no shell panel covers it. The actual document is rendered by native PDFKit; its embedded viewport cannot render inside Scene Builder. The same applies to WKWebView.
+
+For a standalone Scene Builder preview of `BrowserWindow.fxml`, import the built Flux JAR as a custom component library so it can resolve the first-party `WallpaperCanvas` class. The remaining controls use standard JavaFX classes. The wallpaper itself is configured at runtime.
+
+## EasySetup.fxml → EasySetupController.java
+
+All customization controls are declared in FXML. The controller applies changes to `FeatureStore.State.appearance`, normalizes bounded values and asks BrowserController to coalesce the visual update into one pulse. Persistence uses the existing debounced session writer. Named presets are snapshots; import/export accepts the versioned Flux data format. File selection uses native choosers and file IO runs on a bounded worker.
+
+`WallpaperCanvas`, `SystemTheme` and `Soundscape` own background rendering, public JavaFX system-theme observation and optional audio. Their resources are released when the browser closes. Speed Dial applies visibility, size, positioning and effect preferences independently of web-page zoom.
+
+Easy Setup overlays Home; when a WKWebView is present, it occupies `contentLayout.right` so native content resizes beside it. Full browser panels keep their existing lifecycle. Appearance remains independent of tab/session restoration. See [CUSTOMIZATION.md](CUSTOMIZATION.md) for supported controls, defaults and reference differences.
+
+### Foreground accent and menus
+
+`BrowserWindow.fxml` declares a mouse-transparent `ChromeContour` above the shell. Like `WallpaperCanvas`, it needs the compiled Flux JAR on Scene Builder’s library path. The controller supplies the selected tab node; geometry and accent changes request one paint pulse. Disposal removes listeners and stops the timer.
+
+`TabHeader.fxml`, `SpeedDial.fxml` and `DialTile.fxml` define their context menus inside `fx:define`, with explicit `items` collections and controller handlers. `Menus` propagates the owning shell’s stylesheet and palette into popup windows. Workspaces remains in `Features.fxml`, reached by `workspacesButton` directly below the window controls, Browser tools and the Settings category.
+
+The native webpage menu is an exception to the JavaFX/FXML shell: `FluxContextWebView` extends the menu through AppKit’s public `willOpenMenu:withEvent:` hook. Native items keep their original targets. A small isolated-world script captures selections only on trusted context-menu gestures, including child frames; it does not prevent the website’s own context-menu behavior. No polling or background selection indexing runs. Password fields are excluded. The JNI event identifies the source page, and Java drops stale actions after a tab switch or navigation. See [Apple’s contextual-menu hook](https://developer.apple.com/documentation/appkit/nsview/willopenmenu(_:with:)).
