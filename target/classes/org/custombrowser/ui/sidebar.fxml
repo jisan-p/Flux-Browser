@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox fx:id="sidebarRoot"
+      alignment="TOP_CENTER"
+      prefWidth="68.0"
+      minWidth="68.0"
+      maxWidth="68.0"
+      spacing="6.0"
+      styleClass="sidebar"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="org.custombrowser.ui.component.SidebarController">
+    <children>
+        <Label text="GX" styleClass="gx-badge"/>
+        <Button text="⌂" onAction="#home" styleClass="sidebar-button">
+            <tooltip><Tooltip text="Start page"/></tooltip>
+        </Button>
+        <ToggleButton fx:id="gxButton"
+                      text="◩"
+                      onAction="#gxControl"
+                      styleClass="sidebar-button">
+            <tooltip><Tooltip text="GX Control"/></tooltip>
+        </ToggleButton>
+        <Separator/>
+        <ToggleButton fx:id="bookmarksButton"
+                      text="★"
+                      onAction="#bookmarks"
+                      styleClass="sidebar-button">
+            <tooltip><Tooltip text="Bookmarks"/></tooltip>
+        </ToggleButton>
+        <ToggleButton fx:id="historyButton"
+                      text="◷"
+                      onAction="#history"
+                      styleClass="sidebar-button">
+            <tooltip><Tooltip text="History"/></tooltip>
+        </ToggleButton>
+        <ToggleButton fx:id="downloadsButton"
+                      text="⇩"
+                      onAction="#downloads"
+                      styleClass="sidebar-button">
+            <tooltip><Tooltip text="Downloads"/></tooltip>
+        </ToggleButton>
+        <Pane VBox.vgrow="ALWAYS"/>
+        <ToggleButton fx:id="settingsButton"
+                      text="⚙"
+                      onAction="#settings"
+                      styleClass="sidebar-button">
+            <tooltip><Tooltip text="Settings"/></tooltip>
+        </ToggleButton>
+        <Button text="«"
+                onAction="#toggleSidebar"
+                styleClass="sidebar-collapse">
+            <tooltip><Tooltip text="Hide sidebar"/></tooltip>
+        </Button>
+    </children>
+</VBox>

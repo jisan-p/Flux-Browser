@@ -1,6 +1,6 @@
 # Appearance and customization
 
-Flux 1’s Mac interface was redesigned against the installed Opera GX Speed Dial and Easy Setup interface on September 17, 2026. The browser retains Flux branding, its own procedural artwork and its existing browsing engine. Opera AI is excluded.
+Flux 1 keeps its GX-style Speed Dial, procedural wallpaper and Easy Setup controls. The toolbar and sidebar now follow the supplied [Figma reference](https://www.figma.com/design/DZBIqnVeyh0s7SL7huEfUG/Figma-basics?node-id=632-51&m=dev): charcoal surfaces, neutral tab selection, compact navigation buttons and purple sidebar selection. The reference contains raster screenshots; Flux reuses its existing vector controls and working actions. Opera AI is excluded.
 
 Open **Easy Setup** using the sliders icon at the right of the address bar, the sidebar’s bottom button, or **Customize start page**. On Home it overlays the right side, as in the reference. On web pages it occupies a separate layout region: WKWebView resizes beside the controls and returns to its previous size when the panel closes. This avoids native content covering JavaFX controls. Escape closes the drawer.
 
@@ -8,18 +8,18 @@ Open **Easy Setup** using the sliders icon at the right of the address bar, the 
 
 | Group | Implemented behavior |
 | --- | --- |
-| Browser chrome | Narrow sidebar, vertical Mac window controls, compact accent-colored tabs, a new-tab button beside the tabs, a shared Reload/Stop position, and a blank Home address field. Window dragging and resizing remain available. |
+| Browser chrome | 46 px sidebar, vertical Mac window controls, compact neutral tabs, a new-tab button beside the tabs, a continuous charcoal address bar, a shared Reload/Stop position, and a blank Home address field. Window dragging and resizing remain available. |
 | Themes | GX Classic, Ultraviolet, Sub Zero, Frost, Rose Quartz and Mint color presets; custom highlight and background colors. |
 | Light / Dark / Auto | Light and Dark apply immediately. Auto follows the public JavaFX system color-scheme preference where available, including the current JavaFX 26 Mac runtime. JavaFX 21 falls back to Dark for Auto. |
 | Wallpapers | Original Waves, Aurora and Grid artwork, wallpaper on/off, brightness, blur and vignette. Local PNG/JPEG/GIF images can be selected; animated wallpaper playback is not implemented. |
-| Interface | Compact, Comfortable and Spacious spacing; surface opacity; element backgrounds; installed font family and size. Wallpaper blur is a visual background effect, not macOS backdrop blur over a web page. |
+| Interface | Compact, Comfortable and Spacious spacing; Home surface opacity; element backgrounds; installed font family and size. Wallpaper blur is a visual background effect, not macOS backdrop blur over a web page. |
 | Speed Dial | Show/hide search, Speed Dial, tile titles and clock/date. Auto/Top/Center/Bottom positioning, larger tiles, three to eight maximum columns, and None/Zoom/Glow/Lift hover effects. Columns adapt to available width. Animations can be disabled. |
-| Sidebar | Shortcut rail on/off. Home, downloads, bookmarks, history, browser tools and settings open their existing functional destinations. Window controls stay available when shortcuts are hidden. |
+| Sidebar | Shortcut rail on/off. Workspaces stays below the window controls, with Home and downloads beneath it. Browser tools sits in the middle; bookmarks, history, settings and customization are anchored at the bottom. All controls open their existing functional destinations. Window controls stay available when shortcuts are hidden. |
 | Status | Optional status/storage bar. Important short messages appear beneath the toolbar while that bar is hidden. |
 | Audio | Optional original click and address-bar typing sounds; local background music with a volume control. Music pauses when the window is minimized. Sounds and music default to off. |
 | Presets | Save, apply and remove up to 20 named appearance presets. Export/import the versioned Flux JSON format and reset to defaults. Imported/exported presets omit local media paths and do not activate background music. |
 
-The default is dark GX Classic with Waves, compact browser chrome, Comfortable content spacing, six maximum tile columns, hidden tile captions, and no audio. Stored Speed Dial entries remain yours; Opera’s sponsored shortcuts are not imported.
+The default is dark GX Classic with Waves, charcoal browser chrome with purple selection, Comfortable content spacing, six maximum tile columns, hidden tile captions, and no audio. Theme highlight/background controls continue to customize the GX wallpaper, window contour and content panels; the toolbar and sidebar retain their neutral reference palette and adapt to Light/Dark/Auto mode. Stored Speed Dial entries remain yours; Opera’s sponsored shortcuts are not imported.
 
 ## Persistence and resources
 
@@ -55,6 +55,8 @@ mvn -q -Pmodule-ui-check -Dflux.mainClass=com.flux.browser/com.flux.browser.Appe
 Opera’s published [interface overview](https://blogs.opera.com/news/2024/11/opera-gx-now-lets-you-control-every-detail-of-your-browser-with-more-customization-options-than-ever-before/) supplemented the installed-app reference. The appearance implementation and procedural artwork are original Flux code.
 
 ## Shell polish
+
+The [marked Figma spacing reference](https://www.figma.com/design/DZBIqnVeyh0s7SL7huEfUG/Figma-basics?node-id=640-74&m=dev) is implemented as a 4 px shell inset and 4 px gutters between the sidebar, tab strip, navigation bar and content. The sidebar surface is 46 px wide, with the 4 px gutter outside that width and 7 px inner padding around its 32 px buttons. This trims 1 px from each side of the 48 px cropped reference while preserving button size. Each chrome surface has rounded corners; the existing GX wallpaper remains visible through the gaps. The loading indicator sits at the navigation bar’s bottom edge without consuming the gap. Insets and margins are authored in FXML/CSS, so native page bounds follow the same layout when resizing.
 
 The foreground accent uses a beveled upper-left corner, a fading vertical edge, and a shallow bend above the selected tab. The bend follows tab creation, selection, scrolling and resizing. It uses the selected accent color and redraws only when geometry or appearance changes; no continuous animation runs while idle.
 

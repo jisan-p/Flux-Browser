@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.SVGPath?>
@@ -7,8 +8,10 @@
 <StackPane fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.flux.browser.controller.BrowserController" styleClass="browser-root" stylesheets="@../style.css">
     <WallpaperCanvas fx:id="wallpaperCanvas" managed="false"/>
-    <BorderPane fx:id="shell">
+    <BorderPane fx:id="shell" styleClass="floating-shell">
+    <!-- 46 px rail surface with 32 px buttons; the 4 px gutter is outside it. -->
     <left><VBox styleClass="window-rail" alignment="TOP_CENTER" prefWidth="46" minWidth="46" maxWidth="46">
+      <BorderPane.margin><Insets right="4"/></BorderPane.margin>
       <VBox spacing="9" alignment="CENTER" styleClass="traffic-lights">
        <Button text="" onAction="#quit" styleClass="traffic,traffic-close" accessibleText="Close window"/>
        <Button text="" onAction="#minimize" styleClass="traffic,traffic-minimize" accessibleText="Minimize window"/>
@@ -24,6 +27,7 @@
         <BorderPane>
             <top>
                 <VBox>
+                    <BorderPane.margin><Insets bottom="4"/></BorderPane.margin>
                     <HBox styleClass="tab-strip" alignment="CENTER_LEFT" spacing="6">
                         <ScrollPane fx:id="tabScroll" fitToHeight="true" hbarPolicy="NEVER" vbarPolicy="NEVER" pannable="true" HBox.hgrow="NEVER" minWidth="100" styleClass="tab-scroll">
                             <content><HBox fx:id="tabHeaders" alignment="CENTER_LEFT" spacing="6"/></content>
@@ -33,45 +37,51 @@
                         </Button>
                         <Region HBox.hgrow="ALWAYS" fx:id="titleDrag" minWidth="35" prefWidth="100" onMousePressed="#beginDrag" onMouseDragged="#dragWindow" onMouseClicked="#titleClicked"/>
                     </HBox>
-                    <HBox styleClass="navigation-strip" alignment="CENTER_LEFT" spacing="6">
-                        <Button fx:id="backButton" onAction="#back" styleClass="icon-button" accessibleText="Back">
-                            <graphic><SVGPath content="M 11 2 L 4 9 L 11 16" styleClass="line-icon"/></graphic>
-                            <tooltip><Tooltip text="Back · Alt+Left"/></tooltip>
-                        </Button>
-                        <Button fx:id="forwardButton" onAction="#forward" styleClass="icon-button" accessibleText="Forward">
-                            <graphic><SVGPath content="M 4 2 L 11 9 L 4 16" styleClass="line-icon"/></graphic>
-                            <tooltip><Tooltip text="Forward · Alt+Right"/></tooltip>
-                        </Button>
-                        <Button fx:id="reloadButton" onAction="#reload" styleClass="icon-button" accessibleText="Reload page">
-                            <graphic><SVGPath content="M 15 6 A 7 7 0 1 0 16 12 M 15 1 L 15 6 L 10 6" styleClass="line-icon"/></graphic>
-                            <tooltip><Tooltip text="Reload · Ctrl/Cmd+R"/></tooltip>
-                        </Button>
-                        <Button fx:id="stopButton" onAction="#stopLoading" styleClass="icon-button" accessibleText="Stop loading">
-                            <graphic><SVGPath content="M 3 3 L 13 13 M 13 3 L 3 13" styleClass="line-icon"/></graphic>
-                            <tooltip><Tooltip text="Stop · Escape"/></tooltip>
-                        </Button>
-                        <Button fx:id="homeButton" onAction="#home" styleClass="icon-button" accessibleText="Speed Dial home">
-                            <graphic><SVGPath content="M 1 8 L 9 1 L 17 8 M 4 6 L 4 16 L 14 16 L 14 6 M 7 16 L 7 11 L 11 11 L 11 16" styleClass="line-icon"/></graphic>
-                            <tooltip><Tooltip text="Home · Alt+Home"/></tooltip>
-                        </Button>
-                        <HBox styleClass="address-box" alignment="CENTER_LEFT" spacing="10" HBox.hgrow="ALWAYS">
-                            <Label fx:id="schemeLabel" text="⌕" styleClass="scheme-label" minWidth="18"/>
-                            <TextField fx:id="addressBar" promptText="Search the web or enter an address" onAction="#navigate" HBox.hgrow="ALWAYS" styleClass="address-input" accessibleText="Web address or search query"/>
-                            <Button fx:id="bookmarkButton" text="☆" onAction="#toggleBookmark" styleClass="bookmark-button" accessibleText="Bookmark this page">
-                                <tooltip><Tooltip text="Toggle bookmark · Ctrl/Cmd+D"/></tooltip>
+                    <StackPane styleClass="floating-navigation">
+                        <VBox.margin><Insets top="4"/></VBox.margin>
+                        <HBox styleClass="navigation-strip" alignment="CENTER_LEFT" spacing="3">
+                            <Button fx:id="backButton" onAction="#back" styleClass="icon-button" accessibleText="Back">
+                                <graphic><SVGPath content="M 11 2 L 4 9 L 11 16" styleClass="line-icon"/></graphic>
+                                <tooltip><Tooltip text="Back · Alt+Left"/></tooltip>
+                            </Button>
+                            <Button fx:id="forwardButton" onAction="#forward" styleClass="icon-button" accessibleText="Forward">
+                                <graphic><SVGPath content="M 4 2 L 11 9 L 4 16" styleClass="line-icon"/></graphic>
+                                <tooltip><Tooltip text="Forward · Alt+Right"/></tooltip>
+                            </Button>
+                            <Button fx:id="reloadButton" onAction="#reload" styleClass="icon-button" accessibleText="Reload page">
+                                <graphic><SVGPath content="M 15 6 A 7 7 0 1 0 16 12 M 15 1 L 15 6 L 10 6" styleClass="line-icon"/></graphic>
+                                <tooltip><Tooltip text="Reload · Ctrl/Cmd+R"/></tooltip>
+                            </Button>
+                            <Button fx:id="stopButton" onAction="#stopLoading" styleClass="icon-button" accessibleText="Stop loading">
+                                <graphic><SVGPath content="M 3 3 L 13 13 M 13 3 L 3 13" styleClass="line-icon"/></graphic>
+                                <tooltip><Tooltip text="Stop · Escape"/></tooltip>
+                            </Button>
+                            <Button fx:id="homeButton" onAction="#home" styleClass="icon-button" accessibleText="Speed Dial home">
+                                <graphic><SVGPath content="M 1 8 L 9 1 L 17 8 M 4 6 L 4 16 L 14 16 L 14 6 M 7 16 L 7 11 L 11 11 L 11 16" styleClass="line-icon"/></graphic>
+                                <tooltip><Tooltip text="Home · Alt+Home"/></tooltip>
+                            </Button>
+                            <HBox styleClass="address-box" alignment="CENTER_LEFT" spacing="8" minWidth="0" HBox.hgrow="ALWAYS">
+                                <Label fx:id="schemeLabel" text="⌕" styleClass="scheme-label" minWidth="18"/>
+                                <TextField fx:id="addressBar" minWidth="40" promptText="Enter search or web address" onAction="#navigate" HBox.hgrow="ALWAYS" styleClass="address-input" accessibleText="Web address or search query"/>
+                                <Button fx:id="bookmarkButton" text="☆" onAction="#toggleBookmark" styleClass="bookmark-button" accessibleText="Bookmark this page">
+                                    <tooltip><Tooltip text="Toggle bookmark · Ctrl/Cmd+D"/></tooltip>
+                                </Button>
+                            </HBox>
+                            <Button fx:id="featuresButton" onAction="#features" styleClass="icon-button" accessibleText="Browser tools">
+                             <graphic><SVGPath content="M 0 0 L 7 0 L 7 7 L 0 7 Z M 12 0 L 19 0 L 19 7 L 12 7 Z M 0 12 L 7 12 L 7 19 L 0 19 Z M 12 12 L 19 12 L 19 19 L 12 19 Z" styleClass="line-icon"/></graphic>
+                             <tooltip><Tooltip text="Browser tools"/></tooltip>
+                            </Button>
+                            <Button fx:id="easySetupButton" onAction="#easySetup" styleClass="icon-button" accessibleText="Easy Setup">
+                             <graphic><SVGPath content="M 0 3 L 18 3 M 0 9 L 18 9 M 0 15 L 18 15 M 5 0 L 5 6 M 13 6 L 13 12 M 7 12 L 7 18" styleClass="line-icon"/></graphic>
+                             <tooltip><Tooltip text="Easy Setup"/></tooltip>
                             </Button>
                         </HBox>
-                        <Button fx:id="featuresButton" text="Tools" onAction="#features" styleClass="icon-button" accessibleText="Browser tools"/>
-                        <Button fx:id="easySetupButton" onAction="#easySetup" styleClass="icon-button" accessibleText="Easy Setup">
-                         <graphic><SVGPath content="M 0 3 L 18 3 M 0 9 L 18 9 M 0 15 L 18 15 M 5 0 L 5 6 M 13 6 L 13 12 M 7 12 L 7 18" styleClass="line-icon"/></graphic>
-                         <tooltip><Tooltip text="Easy Setup"/></tooltip>
-                        </Button>
-                    </HBox>
+                        <ProgressBar fx:id="loadProgress" progress="0" maxWidth="Infinity" prefHeight="2" minHeight="2" maxHeight="2" StackPane.alignment="BOTTOM_CENTER" mouseTransparent="true" styleClass="page-progress"/>
+                    </StackPane>
                     <HBox fx:id="documentBar" visible="false" managed="false" spacing="10" style="-fx-padding:8;" alignment="CENTER_LEFT">
                         <Label text="PDF viewer"/><Button text="Previous page" onAction="#pdfPrevious"/><Button text="Next page" onAction="#pdfNext"/><Button text="−" onAction="#pdfZoomOut"/><Button text="+" onAction="#pdfZoomIn"/>
                     </HBox>
                     <Label fx:id="toastText" visible="false" managed="false" wrapText="true" maxWidth="Infinity" styleClass="toast-notice"/>
-                    <ProgressBar fx:id="loadProgress" progress="0" maxWidth="Infinity" prefHeight="2" minHeight="2" maxHeight="2" styleClass="page-progress"/>
                 </VBox>
             </top>
             <center>

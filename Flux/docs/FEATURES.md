@@ -2,7 +2,7 @@
 
 **Version 1 is focused on macOS**, using the JavaFX shell and native WKWebView, Keychain, downloads and PDFKit. Windows/Linux support is planned for a later version. Existing compatibility code, resources and checks are preserved for that work.
 
-Open **Tools** beside the address bar to access browser features. Use the adjacent **Easy Setup** sliders icon for the GX-style themes, wallpapers, layout, fonts, sound controls and saved appearance presets. See [CUSTOMIZATION.md](CUSTOMIZATION.md) for the complete controls and differences from Opera GX.
+Open **Browser tools** using the four-square icon beside the address bar to access browser features. Use the adjacent **Easy Setup** sliders icon for the GX-style themes, wallpapers, layout, fonts, sound controls and saved appearance presets. See [CUSTOMIZATION.md](CUSTOMIZATION.md) for the complete controls and differences from Opera GX.
 
 | Feature | How it works / defaults |
 | --- | --- |

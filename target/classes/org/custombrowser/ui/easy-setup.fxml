@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox prefWidth="338.0"
+      maxWidth="338.0"
+      spacing="13.0"
+      styleClass="easy-setup-panel"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="org.custombrowser.ui.component.EasySetupController">
+    <children>
+        <HBox alignment="CENTER_LEFT">
+            <children>
+                <VBox spacing="-2.0">
+                    <children>
+                        <Label text="EASY SETUP" styleClass="dialog-title"/>
+                        <Label text="Phase 1 appearance controls"
+                               styleClass="muted-copy"/>
+                    </children>
+                </VBox>
+                <Pane HBox.hgrow="ALWAYS"/>
+                <Button text="×" onAction="#close" styleClass="panel-action"/>
+            </children>
+        </HBox>
+        <Separator/>
+
+        <Label text="ACCENT" styleClass="section-label"/>
+        <HBox spacing="6.0">
+            <children>
+                <ToggleButton fx:id="redAccent"
+                              text="R"
+                              onAction="#useRedAccent"
+                              styleClass="accent-red-choice"/>
+                <ToggleButton fx:id="cyanAccent"
+                              text="C"
+                              onAction="#useCyanAccent"
+                              styleClass="accent-cyan-choice"/>
+                <ToggleButton fx:id="purpleAccent"
+                              text="P"
+                              onAction="#usePurpleAccent"
+                              styleClass="accent-purple-choice"/>
+                <ToggleButton fx:id="greenAccent"
+                              text="G"
+                              onAction="#useGreenAccent"
+                              styleClass="accent-green-choice"/>
+                <ToggleButton fx:id="orangeAccent"
+                              text="O"
+                              onAction="#useOrangeAccent"
+                              styleClass="accent-orange-choice"/>
+                <ToggleButton fx:id="blueAccent"
+                              text="B"
+                              onAction="#useBlueAccent"
+                              styleClass="accent-blue-choice"/>
+            </children>
+        </HBox>
+
+        <Label text="WALLPAPER" styleClass="section-label"/>
+        <HBox spacing="8.0">
+            <children>
+                <ToggleButton fx:id="gridWallpaper"
+                              text="GRID"
+                              onAction="#useGridWallpaper"
+                              styleClass="wallpaper-choice"/>
+                <ToggleButton fx:id="voidWallpaper"
+                              text="VOID"
+                              onAction="#useVoidWallpaper"
+                              styleClass="wallpaper-choice"/>
+                <ToggleButton fx:id="neonWallpaper"
+                              text="NEON"
+                              onAction="#useNeonWallpaper"
+                              styleClass="wallpaper-choice"/>
+            </children>
+        </HBox>
+        <HBox spacing="8.0">
+            <children>
+                <ToggleButton fx:id="circuitWallpaper"
+                              text="CIRCUIT"
+                              onAction="#useCircuitWallpaper"
+                              styleClass="wallpaper-choice"/>
+                <ToggleButton fx:id="sunsetWallpaper"
+                              text="SUNSET"
+                              onAction="#useSunsetWallpaper"
+                              styleClass="wallpaper-choice"/>
+            </children>
+        </HBox>
+
+        <Label text="INTERFACE SCALE" styleClass="section-label"/>
+        <Slider fx:id="uiScale"
+                min="11.0"
+                max="16.0"
+                value="13.0"
+                majorTickUnit="1.0"
+                blockIncrement="0.5"
+                showTickMarks="true"/>
+
+        <CheckBox fx:id="showSidebar"
+                  text="Show sidebar"
+                  selected="true"/>
+        <CheckBox fx:id="dockPanel"
+                  text="Dock sidebar panels"
+                  selected="true"/>
+        <CheckBox fx:id="reduceMotion"
+                  text="Reduce interface motion"/>
+
+        <Label text="Appearance and suspension preferences are persisted in PostgreSQL."
+               wrapText="true"
+               styleClass="warning-copy"/>
+    </children>
+    <padding>
+        <Insets top="20.0" right="20.0" bottom="20.0" left="20.0"/>
+    </padding>
+</VBox>
