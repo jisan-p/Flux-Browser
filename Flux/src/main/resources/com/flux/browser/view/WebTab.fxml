@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<StackPane fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.WebTabController"
+           styleClass="web-tab" stylesheets="@../style.css">
+    <!-- The selected engine viewport is inserted here only on first web navigation. -->
+    <fx:include fx:id="speedDial" source="SpeedDial.fxml"/>
+    <VBox fx:id="errorPane" alignment="CENTER" spacing="18" visible="false" managed="false" styleClass="error-page">
+        <Label text="CONNECTION INTERRUPTED" styleClass="eyebrow"/>
+        <Label text="A small detour." styleClass="page-title"/>
+        <Label fx:id="errorUrl" text="This address could not be reached." wrapText="true" maxWidth="560" styleClass="muted"/>
+        <Label fx:id="errorMessage" text="Check the address and your internet connection, then try again." wrapText="true" maxWidth="560"/>
+        <HBox alignment="CENTER" spacing="12">
+            <Button fx:id="retryButton" text="Try again ↗" onAction="#retry" styleClass="primary-button"/>
+            <Button text="Back to Speed Dial" onAction="#home" styleClass="secondary-button"/>
+        </HBox>
+    </VBox>
+</StackPane>

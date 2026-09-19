@@ -1,0 +1,67 @@
+# Appearance and customization
+
+Flux 1’s Mac interface was redesigned against the installed Opera GX Speed Dial and Easy Setup interface on September 17, 2026. The browser retains Flux branding, its own procedural artwork and its existing browsing engine. Opera AI is excluded.
+
+Open **Easy Setup** using the sliders icon at the right of the address bar, the sidebar’s bottom button, or **Customize start page**. On Home it overlays the right side, as in the reference. On web pages it occupies a separate layout region: WKWebView resizes beside the controls and returns to its previous size when the panel closes. This avoids native content covering JavaFX controls. Escape closes the drawer.
+
+## Available controls
+
+| Group | Implemented behavior |
+| --- | --- |
+| Browser chrome | Narrow sidebar, vertical Mac window controls, compact accent-colored tabs, a new-tab button beside the tabs, a shared Reload/Stop position, and a blank Home address field. Window dragging and resizing remain available. |
+| Themes | GX Classic, Ultraviolet, Sub Zero, Frost, Rose Quartz and Mint color presets; custom highlight and background colors. |
+| Light / Dark / Auto | Light and Dark apply immediately. Auto follows the public JavaFX system color-scheme preference where available, including the current JavaFX 26 Mac runtime. JavaFX 21 falls back to Dark for Auto. |
+| Wallpapers | Original Waves, Aurora and Grid artwork, wallpaper on/off, brightness, blur and vignette. Local PNG/JPEG/GIF images can be selected; animated wallpaper playback is not implemented. |
+| Interface | Compact, Comfortable and Spacious spacing; surface opacity; element backgrounds; installed font family and size. Wallpaper blur is a visual background effect, not macOS backdrop blur over a web page. |
+| Speed Dial | Show/hide search, Speed Dial, tile titles and clock/date. Auto/Top/Center/Bottom positioning, larger tiles, three to eight maximum columns, and None/Zoom/Glow/Lift hover effects. Columns adapt to available width. Animations can be disabled. |
+| Sidebar | Shortcut rail on/off. Home, downloads, bookmarks, history, browser tools and settings open their existing functional destinations. Window controls stay available when shortcuts are hidden. |
+| Status | Optional status/storage bar. Important short messages appear beneath the toolbar while that bar is hidden. |
+| Audio | Optional original click and address-bar typing sounds; local background music with a volume control. Music pauses when the window is minimized. Sounds and music default to off. |
+| Presets | Save, apply and remove up to 20 named appearance presets. Export/import the versioned Flux JSON format and reset to defaults. Imported/exported presets omit local media paths and do not activate background music. |
+
+The default is dark GX Classic with Waves, compact browser chrome, Comfortable content spacing, six maximum tile columns, hidden tile captions, and no audio. Stored Speed Dial entries remain yours; Opera’s sponsored shortcuts are not imported.
+
+## Persistence and resources
+
+Appearance and named presets are part of the existing atomic `session.json` in `~/Library/Application Support/Flux`. They restore even if tab restoration is disabled. Existing session files receive appearance defaults automatically. Writes use the same debounced session writer; no PostgreSQL schema changes are needed.
+
+Preset files accept bounded data fields, not arbitrary CSS, scripts or remote asset URLs. Fonts are chosen from installed families. Wallpaper and music selection use native file choosers; images are limited to 32 MB and music files to 200 MB. Local media is referenced in place, so moving or deleting it requires choosing it again. An unavailable wallpaper falls back to procedural artwork.
+
+The wallpaper redraws only after a size or appearance change, coalesced into a JavaFX pulse. It has no continuous animation loop. Custom image decoding uses background loading and a bounded requested image size. Only the active Home clock runs, and only when the clock is enabled. Hover transitions are short and optional. File operations run on one worker with a bounded queue. Native web rendering and video continue to use WKWebView.
+
+## Differences from Opera GX
+
+This implements the shared visual layout and a working Flux customization system; it is not complete pixel-for-pixel Opera GX parity. The following require separate assets, services or browser-engine work and have no placeholder controls:
+
+- Opera AI, accounts, VPN, news/game feeds, sponsored suggestions and its online widget services.
+- Opera’s mod marketplace and package runtime, shader/web-modding system, live video wallpapers and splash-screen mods.
+- Opera’s Underwave font, branded artwork, third-party promotional tile graphics, proprietary sound packs and arbitrary icon replacement.
+- Chromium-specific resource limiters, extensions and GPU effects. Flux’s existing native WebKit process management is retained.
+
+The settings form controls use JavaFX skins, and web-page customization panels reflow native content instead of overlaying it. These are visible differences from the reference. Windows/Linux compatibility code remains in place for the next version.
+
+## Verification
+
+`AppearanceUiChecks` uses a temporary profile and a local HTTP page. It checks real FXML controls, theme application, presets, a 940 × 650 layout, native viewport reflow, persistence and relaunch with tab restoration disabled. Headless checks cover invalid colors/fonts/remote asset references, numeric bounds, old-session migration and preset persistence. Snapshots cover default Home, Easy Setup, Light mode and compact layout.
+
+```sh
+mvn -q -Pmodule-ui-check -Dflux.mainClass=com.flux.browser/com.flux.browser.AppearanceUiChecks test-compile javafx:run
+```
+
+![Flux Mac start page](images/flux-gx-home.png)
+
+![Flux Easy Setup](images/flux-gx-easy-setup.png)
+
+Opera’s published [interface overview](https://blogs.opera.com/news/2024/11/opera-gx-now-lets-you-control-every-detail-of-your-browser-with-more-customization-options-than-ever-before/) supplemented the installed-app reference. The appearance implementation and procedural artwork are original Flux code.
+
+## Shell polish
+
+The foreground accent uses a beveled upper-left corner, a fading vertical edge, and a shallow bend above the selected tab. The bend follows tab creation, selection, scrolling and resizing. It uses the selected accent color and redraws only when geometry or appearance changes; no continuous animation runs while idle.
+
+Right-click a tab for New Tab, Reload, Copy Page Address, Duplicate, Close, Close Other Tabs, Close Tabs to the Right, and Reopen Last Closed Tab. Bulk closing is limited to the current workspace; Focus mode disables tab-changing actions. Right-click Speed Dial for adding a site, refreshing, Easy Setup or Settings. Shortcut menus offer opening, copying, editing and removing; unavailable storage actions are disabled. These shell menus share the current theme. Website menus keep WebKit’s link, media, selection and Inspect Element actions and add Search Selection in New Tab, Translate Page, Reader Mode and Save Page As. Translation offers a preferred language and explicit language choices; the result opens in a new tab.
+
+Settings now has a category sidebar, search with empty-result feedback, theme previews, Light/Auto/Dark selection, zoom and storage controls. Other sections link to the existing browser tools. The **Workspaces** button sits directly below the window controls in the left rail and opens workspace management. It is also accessible from Browser tools. Settings uses a gear icon; Easy Setup uses sliders.
+
+![Flux Settings](images/flux-gx-settings.png)
+
+![Tab context menu](images/flux-gx-tab-menu.png)

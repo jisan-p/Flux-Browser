@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?><?import javafx.scene.control.*?>
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.ReaderController" prefWidth="760" prefHeight="720" stylesheets="@../style.css" styleClass="browser-root">
+ <top><VBox spacing="10" style="-fx-padding:24;"><Label fx:id="title" wrapText="true" styleClass="page-title"/><Label fx:id="byline" wrapText="true"/><HBox spacing="12"><Button text="A−" onAction="#smaller"/><Button text="A+" onAction="#larger"/><Button text="Open original" onAction="#original"/></HBox></VBox></top>
+ <center><ScrollPane fitToWidth="true"><content><Label fx:id="article" wrapText="true" maxWidth="Infinity" style="-fx-padding:24; -fx-font-size:18;"/></content></ScrollPane></center>
+</BorderPane>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.SVGPath?>
+<BorderPane fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.SettingsController"
+ visible="false" managed="false" styleClass="settings-root" stylesheets="@../style.css">
+ <fx:define><ToggleGroup fx:id="categories"/><ToggleGroup fx:id="displayModes"/></fx:define>
+ <top><VBox alignment="CENTER" spacing="20" styleClass="settings-header">
+  <HBox alignment="CENTER" spacing="24"><Button text="HISTORY" onAction="#history" styleClass="text-button"/><Button text="DOWNLOADS" userData="Downloads" onAction="#openFeature" styleClass="text-button"/><Label text="SETTINGS" styleClass="settings-title"/><Button text="BOOKMARKS" onAction="#bookmarks" styleClass="text-button"/><Button text="×" onAction="#dismiss" accessibleText="Close settings" styleClass="text-button"/></HBox>
+ </VBox></top>
+ <left><VBox spacing="4" styleClass="settings-navigation" prefWidth="190" minWidth="150"><ToggleButton text="Appearance" userData="Appearance" toggleGroup="$categories" maxWidth="Infinity" onAction="#category" styleClass="settings-category" selected="true"/>
+<ToggleButton text="Browser tools" userData="Browser tools" toggleGroup="$categories" maxWidth="Infinity" onAction="#category" styleClass="settings-category"/>
+<ToggleButton text="Privacy" userData="Privacy" toggleGroup="$categories" maxWidth="Infinity" onAction="#category" styleClass="settings-category"/>
+<ToggleButton text="Search" userData="Search" toggleGroup="$categories" maxWidth="Infinity" onAction="#category" styleClass="settings-category"/>
+<ToggleButton text="Passwords" userData="Passwords" toggleGroup="$categories" maxWidth="Infinity" onAction="#category" styleClass="settings-category"/>
+<ToggleButton text="Downloads" userData="Downloads" toggleGroup="$categories" maxWidth="Infinity" onAction="#category" styleClass="settings-category"/>
+<ToggleButton text="Storage" userData="Storage" toggleGroup="$categories" maxWidth="Infinity" onAction="#category" styleClass="settings-category"/>
+<ToggleButton text="About" userData="About" toggleGroup="$categories" maxWidth="Infinity" onAction="#category" styleClass="settings-category"/></VBox></left>
+ <center><ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="settings-scroll"><content><VBox spacing="18" styleClass="settings-body">
+ <TextField fx:id="settingsSearch" promptText="Search settings" accessibleText="Search settings" maxWidth="850"/>
+ <VBox fx:id="settingsCards" spacing="18" maxWidth="850">            <VBox userData="Appearance themes wallpaper colors zoom light dark auto mode layout sounds" spacing="18" styleClass="settings-card" maxWidth="850">
+                <Label text="Themes" styleClass="setting-title"/><FlowPane fx:id="themeChoices" hgap="10" vgap="10"><Button text="GX Classic" userData="GX Classic" onAction="#theme" contentDisplay="TOP" graphicTextGap="10" styleClass="settings-theme" style="-preview-color:#fa1e4e;"><graphic><SVGPath content="M 1 1 L 70 1 L 70 42 L 1 42 Z M 1 8 L 70 8 M 7 8 L 7 42 M 16 18 L 30 18 L 30 28 L 16 28 Z M 37 18 L 51 18 L 51 28 L 37 28 Z" styleClass="theme-outline"/></graphic></Button><Button text="Ultraviolet" userData="Ultraviolet" onAction="#theme" contentDisplay="TOP" graphicTextGap="10" styleClass="settings-theme" style="-preview-color:#965bff;"><graphic><SVGPath content="M 1 1 L 70 1 L 70 42 L 1 42 Z M 1 8 L 70 8 M 7 8 L 7 42 M 16 18 L 30 18 L 30 28 L 16 28 Z M 37 18 L 51 18 L 51 28 L 37 28 Z" styleClass="theme-outline"/></graphic></Button><Button text="Sub Zero" userData="Sub Zero" onAction="#theme" contentDisplay="TOP" graphicTextGap="10" styleClass="settings-theme" style="-preview-color:#536dfe;"><graphic><SVGPath content="M 1 1 L 70 1 L 70 42 L 1 42 Z M 1 8 L 70 8 M 7 8 L 7 42 M 16 18 L 30 18 L 30 28 L 16 28 Z M 37 18 L 51 18 L 51 28 L 37 28 Z" styleClass="theme-outline"/></graphic></Button><Button text="Frost" userData="Frost" onAction="#theme" contentDisplay="TOP" graphicTextGap="10" styleClass="settings-theme" style="-preview-color:#00d9ed;"><graphic><SVGPath content="M 1 1 L 70 1 L 70 42 L 1 42 Z M 1 8 L 70 8 M 7 8 L 7 42 M 16 18 L 30 18 L 30 28 L 16 28 Z M 37 18 L 51 18 L 51 28 L 37 28 Z" styleClass="theme-outline"/></graphic></Button><Button text="Rose Quartz" userData="Rose Quartz" onAction="#theme" contentDisplay="TOP" graphicTextGap="10" styleClass="settings-theme" style="-preview-color:#f28ac5;"><graphic><SVGPath content="M 1 1 L 70 1 L 70 42 L 1 42 Z M 1 8 L 70 8 M 7 8 L 7 42 M 16 18 L 30 18 L 30 28 L 16 28 Z M 37 18 L 51 18 L 51 28 L 37 28 Z" styleClass="theme-outline"/></graphic></Button><Button text="Mint" userData="Mint" onAction="#theme" contentDisplay="TOP" graphicTextGap="10" styleClass="settings-theme" style="-preview-color:#57dfb5;"><graphic><SVGPath content="M 1 1 L 70 1 L 70 42 L 1 42 Z M 1 8 L 70 8 M 7 8 L 7 42 M 16 18 L 30 18 L 30 28 L 16 28 Z M 37 18 L 51 18 L 51 28 L 37 28 Z" styleClass="theme-outline"/></graphic></Button></FlowPane><HBox fx:id="modeChoices" spacing="0"><ToggleButton text="Light" userData="Light" onAction="#mode" toggleGroup="$displayModes" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="mode-choice"/><ToggleButton text="Auto" userData="Auto" onAction="#mode" toggleGroup="$displayModes" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="mode-choice"/><ToggleButton text="Dark" userData="Dark" onAction="#mode" toggleGroup="$displayModes" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="mode-choice"/></HBox><Button fx:id="openCustomization" text="Wallpapers, layout and sounds…" onAction="#customize" styleClass="secondary-button"/>
+                <HBox alignment="CENTER_LEFT" spacing="20">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Accent color" styleClass="setting-title"/>
+                        <Label text="Tabs, highlights, and your home screen. Saved on this Mac." styleClass="muted" wrapText="true"/>
+                    </VBox>
+                    <Button fx:id="magentaButton" text="●  GX Red" onAction="#magenta" styleClass="accent-choice,magenta-choice"/>
+                    <Button fx:id="cyanButton" text="●  Cyan" onAction="#cyan" styleClass="accent-choice,cyan-choice"/>
+                </HBox>
+                <Separator/>
+                <HBox alignment="CENTER_LEFT" spacing="20">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Page zoom" styleClass="setting-title"/>
+                        <Label text="Adjust the website in your current tab." styleClass="muted"/>
+                    </VBox>
+                    <Slider fx:id="zoomSlider" min="75" max="150" value="100" blockIncrement="5" prefWidth="180" accessibleText="Current page zoom"/>
+                    <Label fx:id="zoomLabel" text="100%" minWidth="44"/>
+                    <Button text="Reset" onAction="#resetZoom" styleClass="text-button"/>
+                </HBox>
+            </VBox>
+            <VBox userData="Storage database saved browsing data" spacing="14" styleClass="settings-card" maxWidth="850">
+                <HBox alignment="CENTER_LEFT">
+                    <Label text="SAVED BROWSING DATA" styleClass="section-heading"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="connectionLabel" text="Connecting…" styleClass="connection-label"/>
+                </HBox>
+                <Label text="Your bookmarks, history, and Speed Dial are stored in your PostgreSQL database." wrapText="true"/>
+                <Label fx:id="connectionDetail" text="Checking your connection…" styleClass="muted" wrapText="true"/>
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <Button fx:id="reconnectButton" text="Reconnect storage" onAction="#reconnect" styleClass="secondary-button"/>
+                    <Label text="Reconnect to resume saving your bookmarks, history and shortcuts." styleClass="muted" wrapText="true" HBox.hgrow="ALWAYS"/>
+                </HBox>
+            </VBox>
+<VBox userData="Browser tools workspaces focus sessions" spacing="14" styleClass="settings-card"><Label text="Browser tools" styleClass="setting-title"/><Label text="Workspaces, Focus mode and saved sessions." styleClass="muted" wrapText="true"/><Button text="Open browser tools" userData="Workspaces" onAction="#openFeature" styleClass="secondary-button"/></VBox>
+<VBox userData="Privacy blocking rules browsing data" spacing="14" styleClass="settings-card"><Label text="Privacy" styleClass="setting-title"/><Label text="Manage blocking rules, browsing data and privacy controls." styleClass="muted" wrapText="true"/><Button text="Open privacy" userData="Privacy" onAction="#openFeature" styleClass="secondary-button"/></VBox>
+<VBox userData="Search providers shortcuts" spacing="14" styleClass="settings-card"><Label text="Search" styleClass="setting-title"/><Label text="Choose search providers and customize search shortcuts." styleClass="muted" wrapText="true"/><Button text="Open search" userData="Search" onAction="#openFeature" styleClass="secondary-button"/></VBox>
+<VBox userData="Passwords macOS Keychain" spacing="14" styleClass="settings-card"><Label text="Passwords" styleClass="setting-title"/><Label text="Manage passwords with macOS Keychain." styleClass="muted" wrapText="true"/><Button text="Open passwords" userData="Passwords" onAction="#openFeature" styleClass="secondary-button"/></VBox>
+<VBox userData="Downloads folder save files" spacing="14" styleClass="settings-card"><Label text="Downloads" styleClass="setting-title"/><Label text="View downloads and choose where to save files." styleClass="muted" wrapText="true"/><Button text="Open downloads" userData="Downloads" onAction="#openFeature" styleClass="secondary-button"/></VBox>
+<VBox userData="About Flux version macOS" spacing="14" styleClass="settings-card"><Label text="FLUX 1.0" styleClass="setting-title"/><Label text="Built for macOS · Native WebKit" styleClass="muted"/><Label text="Your browser, your space." wrapText="true"/></VBox></VBox>
+ <Label fx:id="noResults" text="No matching settings" visible="false" managed="false" styleClass="muted"/>
+ </VBox></content></ScrollPane></center>
+</BorderPane>

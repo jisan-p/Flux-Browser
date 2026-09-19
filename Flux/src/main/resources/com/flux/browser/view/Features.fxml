@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?><?import javafx.scene.control.*?>
+<BorderPane fx:id="root" visible="false" managed="false" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.FeaturesController" styleClass="browser-root" stylesheets="@../style.css">
+ <top><VBox spacing="12" style="-fx-padding:22;"><HBox spacing="12" alignment="CENTER_LEFT"><Label text="Browser tools" styleClass="page-title"/><Region HBox.hgrow="ALWAYS"/><Button fx:id="developerToolsButton" text="Developer Tools" onAction="#developerTools"><tooltip><Tooltip text="Web Inspector · F12 or ⌥⌘I"/></tooltip></Button><Button text="Console" onAction="#developerConsole"/><Button text="Back to page" onAction="#dismiss"/></HBox><FlowPane fx:id="compatibilityPageTools" visible="false" managed="false" hgap="12"><Button fx:id="readerButton" text="Reader mode" onAction="#reader"/><Button text="Translate page ↗" onAction="#translate"/></FlowPane><Label fx:id="feedback" wrapText="true" text="Browser preferences and saved data. Right-click a webpage for translation, search, Reader mode and Save Page."/></VBox></top>
+ <center><TabPane fx:id="featureTabs" tabClosingPolicy="UNAVAILABLE">
+  <tabs>
+   <Tab text="Workspaces"><ScrollPane fitToWidth="true"><content><VBox spacing="14" style="-fx-padding:24;">
+    <Label text="Keep related tabs together" styleClass="section-title"/><HBox spacing="10"><ComboBox fx:id="workspace" prefWidth="260"/><Button text="Switch workspace" onAction="#switchWorkspace"/></HBox><HBox spacing="10"><TextField fx:id="workspaceName" promptText="New workspace name"/><Button text="Create" onAction="#createWorkspace"/><Button text="Move current tab here" onAction="#moveTab"/><Button text="Delete workspace" onAction="#deleteWorkspace"/></HBox>
+    <CheckBox fx:id="restore" text="Restore tabs and workspaces on startup" onAction="#saveOptions"/><Label text="Only the selected restored tab loads immediately. Forms and page scroll positions are not saved." wrapText="true"/>
+    <CheckBox fx:id="focus" text="Focus mode: keep this tab; disable new tabs and popups" onAction="#focusMode"/>
+    <Button text="Reopen last closed tab" onAction="#reopen"/>
+   </VBox></content></ScrollPane></Tab>
+   <Tab text="Privacy"><ScrollPane fitToWidth="true"><content><VBox spacing="14" style="-fx-padding:24;">
+    <CheckBox fx:id="blocker" text="Block third-party advertising and tracking domains" onAction="#saveOptions"/>
+    <Label text="Starts with a small bundled domain set. Updating imports up to 30,000 supported domain rules from AdGuard DNS Filter. First-party ads and cosmetic filtering are not covered." wrapText="true"/>
+    <HBox spacing="12"><Button text="Update blocklist" onAction="#updateRules"/><Button text="Allow this site" onAction="#allowSite"/><Button text="Block on this site again" onAction="#blockSite"/></HBox>
+    <CheckBox fx:id="https" text="Upgrade known HTTP hosts to HTTPS" onAction="#saveOptions"/>
+    <CheckBox fx:id="phishing" text="Use WebKit fraudulent-site warnings" onAction="#saveOptions"/>
+    <Label text="HTTPS upgrades apply to hosts known by the system. Fraudulent-site warnings use WebKit's system service and are not a guarantee that every unsafe site is detected. These native-engine settings apply to newly opened tabs." wrapText="true"/>
+    <CheckBox fx:id="fullText" text="Index visited page text for full-text history search" onAction="#saveOptions"/>
+    <Label text="Optional: stores up to 200,000 characters per page and 1,000 pages in PostgreSQL. Password forms are excluded, but other signed-in content may be indexed. Clearing history also clears this index." wrapText="true"/>
+    <Button text="Clear page-text index" onAction="#clearIndex"/>
+   </VBox></content></ScrollPane></Tab>
+   <Tab text="Search"><VBox spacing="12" style="-fx-padding:24;">
+    <HBox spacing="12" alignment="CENTER_LEFT"><Label text="Translate pages into"/><ComboBox fx:id="language" prefWidth="130" accessibleText="Preferred translation language"/></HBox>
+    <Label text="Instant arithmetic: type = (12 + 8) / 4 in the address bar." wrapText="true"/>
+    <Label text="Search plugins use HTTPS URL templates; they do not execute code."/>
+    <ListView fx:id="providers" prefHeight="150"/>
+    <HBox spacing="8"><TextField fx:id="keyword" promptText="!keyword" prefWidth="100"/><TextField fx:id="providerName" promptText="Name"/><TextField fx:id="providerUrl" promptText="https://example.com/search?q={query}" HBox.hgrow="ALWAYS"/><Button text="Save" onAction="#saveProvider"/><Button text="Remove" onAction="#removeProvider"/></HBox>
+    <Separator/><HBox spacing="10"><TextField fx:id="textQuery" promptText="Search indexed page contents" onAction="#searchText" HBox.hgrow="ALWAYS"/><Button text="Search" onAction="#searchText"/></HBox>
+    <ListView fx:id="textResults" VBox.vgrow="ALWAYS"/><Button text="Open selected result" onAction="#openResult"/>
+   </VBox></Tab>
+   <Tab text="Passwords"><VBox spacing="14" style="-fx-padding:24;">
+    <Label text="Fill only after you choose a login; Flux never submits the form." wrapText="true"/>
+    <ComboBox fx:id="passwordProvider" prefWidth="260"/>
+    <Label fx:id="loginOrigin" wrapText="true"/>
+    <TextField fx:id="loginUser" promptText="Username (Keychain) or item ID (CLI provider)"/>
+    <PasswordField fx:id="loginPassword" promptText="Password to save in macOS Keychain"/>
+    <HBox spacing="10"><Button text="Save in Keychain" onAction="#saveLogin"/><Button text="Fill selected login" onAction="#fillLogin"/><Button text="Delete from Keychain" onAction="#deleteLogin"/></HBox>
+    <Label text="Keychain entries belong to Flux and are scoped to the exact HTTPS origin and username. CLI providers require Bitwarden or 1Password installed and unlocked separately; Flux retrieves only the item ID you supply. Save/edit those external items in their own app." wrapText="true"/>
+   </VBox></Tab>
+   <Tab text="Downloads"><VBox spacing="14" style="-fx-padding:24;">
+    <Button fx:id="openPdfButton" text="Open PDF…" onAction="#openPdf"/>
+    <Label text="Choose the save location for each download. Files are never opened automatically." wrapText="true"/>
+    <ListView fx:id="downloads" VBox.vgrow="ALWAYS"/>
+    <HBox spacing="12"><Button text="Cancel selected" onAction="#cancelDownload"/><Button text="Reveal in Finder" onAction="#revealDownload"/><Button text="Open downloaded PDF" onAction="#downloadedPdf"/></HBox>
+   </VBox></Tab>
+  </tabs>
+ </TabPane></center>
+</BorderPane>

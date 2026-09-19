@@ -1,0 +1,5 @@
+# Copy to config/database.properties. Environment variables override these values.
+# The database and role must already exist; Flux creates its tables automatically.
+url=jdbc:postgresql://localhost:5432/flux
+user=flux
+password=replace-with-your-local-password

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<HBox fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.TabHeaderController"
+      alignment="CENTER_LEFT" spacing="9" minWidth="155" prefWidth="190" maxWidth="210" onMouseClicked="#clicked" onContextMenuRequested="#contextMenu" styleClass="tab-chip" stylesheets="@../style.css">
+    <fx:define>
+        <ContextMenu fx:id="tabMenu" styleClass="gx-context-menu"><items>
+            <MenuItem text="New Tab" fx:id="newItem" onAction="#newTab"/>
+            <SeparatorMenuItem/>
+            <MenuItem text="Reload" onAction="#reload"/>
+            <MenuItem text="Copy Page Address" onAction="#copy"/>
+            <SeparatorMenuItem/>
+            <MenuItem text="Duplicate Tab" fx:id="duplicateItem" onAction="#duplicate"/>
+            <SeparatorMenuItem/>
+            <MenuItem text="Close Tab" fx:id="closeItem" onAction="#close"/>
+            <MenuItem text="Close Other Tabs" fx:id="closeOthersItem" onAction="#closeOthers"/>
+            <MenuItem text="Close Tabs to the Right" fx:id="closeRightItem" onAction="#closeRight"/>
+            <SeparatorMenuItem/>
+            <MenuItem text="Reopen Last Closed Tab" fx:id="reopenItem" onAction="#reopen"/>
+        </items></ContextMenu>
+    </fx:define>
+    <StackPane prefWidth="14" minWidth="14">
+        <Label fx:id="tabIcon" text="◈" styleClass="tab-icon"/>
+        <ProgressIndicator fx:id="spinner" prefWidth="13" prefHeight="13" maxWidth="13" maxHeight="13" progress="-1" visible="false"/>
+    </StackPane>
+    <Label fx:id="titleLabel" text="Speed Dial" minWidth="0" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="tab-title">
+        <tooltip><Tooltip fx:id="titleTooltip" text="Speed Dial"/></tooltip>
+    </Label>
+    <Button fx:id="closeButton" text="×" onAction="#close" styleClass="tab-close" accessibleText="Close tab"/>
+</HBox>

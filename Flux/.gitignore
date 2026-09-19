@@ -1,0 +1,7 @@
+target/
+config/database.properties
+.env
+.idea/
+*.iml
+.DS_Store
+*.log

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.LibraryController"
+      spacing="20" visible="false" managed="false" styleClass="library-page" stylesheets="@../style.css">
+    <HBox alignment="CENTER_LEFT">
+        <Label text="YOUR SPACE / LIBRARY" styleClass="eyebrow"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Back to browsing  ×" onAction="#dismiss" styleClass="text-button"/>
+    </HBox>
+    <VBox spacing="9">
+        <Label fx:id="heading" text="Bookmarks" styleClass="page-title"/>
+        <Label fx:id="subtitle" text="Keep the good stuff close." styleClass="hero-subtitle"/>
+    </VBox>
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <TextField fx:id="filterField" promptText="Search titles, addresses, or folders" HBox.hgrow="ALWAYS" accessibleText="Search library"/>
+        <Button fx:id="refreshButton" text="Refresh" onAction="#refresh" styleClass="secondary-button"/>
+        <Button fx:id="addButton" text="+  Add bookmark" onAction="#add" styleClass="primary-button"/>
+        <Button fx:id="clearButton" text="Clear history" onAction="#clear" styleClass="danger-button"/>
+    </HBox>
+    <Label fx:id="resultLabel" text="Loading your library…" styleClass="muted"/>
+    <ListView fx:id="entries" VBox.vgrow="ALWAYS" styleClass="library-list" accessibleText="Saved library entries">
+        <placeholder><Label fx:id="emptyLabel" text="Nothing here yet. Your next discovery is waiting." styleClass="empty-label" wrapText="true"/></placeholder>
+    </ListView>
+</VBox>
