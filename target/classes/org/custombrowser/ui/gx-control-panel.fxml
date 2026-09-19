@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox fx:id="panelRoot"
+      styleClass="panel-content"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <ScrollPane fitToWidth="true"
+                    hbarPolicy="NEVER"
+                    styleClass="gx-control-scroll"
+                    VBox.vgrow="ALWAYS">
+            <content>
+                <VBox spacing="11.0">
+                    <children>
+                        <Label text="PROCESS-WIDE METRICS · 1 SECOND"
+                               styleClass="section-label"/>
+                        <Label text="JavaFX cannot measure CPU or RAM per WebView. These values cover the entire Flux process."
+                               wrapText="true"
+                               styleClass="warning-copy"/>
+                        <VBox spacing="6.0" styleClass="metric-card">
+                            <children>
+                                <HBox>
+                                    <children>
+                                        <Label text="CPU" styleClass="metric-name"/>
+                                        <Pane HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="cpuValue" text="SAMPLING…"
+                                               styleClass="metric-value"/>
+                                    </children>
+                                </HBox>
+                                <ProgressBar fx:id="cpuProgress" progress="0.0"
+                                             maxWidth="1.7976931348623157E308"/>
+                            </children>
+                        </VBox>
+                        <VBox spacing="6.0" styleClass="metric-card">
+                            <children>
+                                <HBox>
+                                    <children>
+                                        <Label text="MEMORY" styleClass="metric-name"/>
+                                        <Pane HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="memoryValue" text="SAMPLING…"
+                                               styleClass="metric-value"/>
+                                    </children>
+                                </HBox>
+                                <ProgressBar fx:id="memoryProgress" progress="0.0"
+                                             maxWidth="1.7976931348623157E308"/>
+                                <Label fx:id="jvmValue"
+                                       text="HEAP / NON-HEAP SAMPLING…"
+                                       wrapText="true" styleClass="metric-value"/>
+                                <HBox>
+                                    <children>
+                                        <Label text="OPEN TABS" styleClass="metric-name"/>
+                                        <Pane HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="tabCountValue" text="0 OPEN"
+                                               styleClass="metric-value"/>
+                                    </children>
+                                </HBox>
+                            </children>
+                        </VBox>
+                        <LineChart fx:id="cpuChart" animated="false"
+                                   createSymbols="false" legendVisible="false"
+                                   prefHeight="125.0" title="PROCESS CPU %">
+                            <xAxis>
+                                <NumberAxis forceZeroInRange="false"
+                                            tickLabelsVisible="false"
+                                            tickMarkVisible="false"/>
+                            </xAxis>
+                            <yAxis>
+                                <NumberAxis lowerBound="0.0" upperBound="100.0"
+                                            tickUnit="25.0" autoRanging="false"/>
+                            </yAxis>
+                        </LineChart>
+                        <LineChart fx:id="memoryChart" animated="false"
+                                   createSymbols="false" legendVisible="false"
+                                   prefHeight="125.0" title="RESIDENT MEMORY MiB">
+                            <xAxis>
+                                <NumberAxis forceZeroInRange="false"
+                                            tickLabelsVisible="false"
+                                            tickMarkVisible="false"/>
+                            </xAxis>
+                            <yAxis><NumberAxis forceZeroInRange="true"/></yAxis>
+                        </LineChart>
+                        <Separator/>
+                        <Label text="TAB SUSPENSION" styleClass="section-label"/>
+                        <CheckBox fx:id="autoSuspendEnabled"
+                                  text="Auto-suspend inactive tabs"/>
+                        <HBox alignment="CENTER_LEFT" spacing="8.0">
+                            <children>
+                                <Slider fx:id="autoSuspendMinutes" min="1.0"
+                                        max="60.0" value="15.0"
+                                        blockIncrement="1.0" snapToTicks="true"
+                                        HBox.hgrow="ALWAYS"/>
+                                <Label fx:id="autoSuspendValue" text="15 MINUTES"
+                                       styleClass="metric-value"/>
+                            </children>
+                        </HBox>
+                        <Label text="Active, pinned, loading, Start Page, suspended, and Keep Active tabs are never auto-suspended."
+                               wrapText="true" styleClass="muted-copy"/>
+                        <Label text="HOT TABS · ACTIVITY HEURISTIC"
+                               styleClass="section-label"/>
+                        <Label text="Ranking uses recency, navigation, and load state—not fabricated per-tab hardware measurements."
+                               wrapText="true" styleClass="warning-copy"/>
+                        <ListView fx:id="hotTabList" prefHeight="155.0"
+                                  styleClass="data-list"/>
+                        <HBox spacing="5.0">
+                            <children>
+                                <Button text="SUSPEND" onAction="#suspendSelectedTab"
+                                        styleClass="danger-action"/>
+                                <Button text="RESUME" onAction="#resumeSelectedTab"
+                                        styleClass="compact-action"/>
+                                <Button text="KEEP ACTIVE"
+                                        onAction="#toggleSuspensionExclusion"
+                                        styleClass="compact-action"/>
+                            </children>
+                        </HBox>
+                        <Label fx:id="suspensionStatus"
+                               text="SELECT A BACKGROUND TAB" wrapText="true"
+                               styleClass="data-status"/>
+                        <Separator/>
+                        <Label text="GX CLEANER · OLDER THAN 30 DAYS"
+                               styleClass="section-label"/>
+                        <CheckBox fx:id="cleanExpiredHistory"
+                                  text="Expired browsing history" selected="true"/>
+                        <CheckBox fx:id="cleanCompletedDownloads"
+                                  text="Completed download metadata" selected="true"/>
+                        <CheckBox fx:id="cleanFavicons"
+                                  text="In-memory favicon cache" selected="true"/>
+                        <CheckBox fx:id="cleanOldSessions"
+                                  text="Old session / closed-tab metadata"
+                                  selected="true"/>
+                        <Label text="Cleaner never deletes downloaded files or the newest saved session."
+                               wrapText="true" styleClass="muted-copy"/>
+                        <HBox spacing="6.0">
+                            <children>
+                                <Button text="PREVIEW" onAction="#previewCleaner"
+                                        styleClass="compact-action"/>
+                                <Button text="CLEAN SELECTED" onAction="#runCleaner"
+                                        styleClass="danger-action"/>
+                            </children>
+                        </HBox>
+                        <Label fx:id="cleanerPreview" text="PREVIEW NOT LOADED"
+                               wrapText="true" styleClass="data-status"/>
+                    </children>
+                    <padding>
+                        <Insets top="14.0" right="12.0" bottom="18.0" left="12.0"/>
+                    </padding>
+                </VBox>
+            </content>
+        </ScrollPane>
+    </children>
+</VBox>

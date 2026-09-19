@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox prefWidth="312.0"
+      minWidth="312.0"
+      maxWidth="312.0"
+      maxHeight="1.7976931348623157E308"
+      visible="false"
+      managed="false"
+      styleClass="sidebar-panel"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="org.custombrowser.ui.component.SidebarPanelController">
+    <children>
+        <HBox alignment="CENTER_LEFT" spacing="8.0" styleClass="panel-header">
+            <children>
+                <Label fx:id="panelTitle"
+                       text=""
+                       styleClass="panel-title"
+                       HBox.hgrow="ALWAYS"/>
+                <ToggleButton fx:id="dockButton"
+                              text="▥"
+                              selected="true"
+                              styleClass="panel-action"/>
+                <Button text="×"
+                        onAction="#closePanel"
+                        styleClass="panel-action"/>
+            </children>
+        </HBox>
+        <StackPane fx:id="panelContentHost" VBox.vgrow="ALWAYS"/>
+    </children>
+</VBox>

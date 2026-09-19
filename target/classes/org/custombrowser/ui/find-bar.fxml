@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+
+<HBox alignment="CENTER_RIGHT"
+      spacing="7.0"
+      styleClass="find-bar"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="org.custombrowser.ui.component.FindBarController">
+    <children>
+        <Pane HBox.hgrow="ALWAYS"/>
+        <TextField fx:id="queryField"
+                   promptText="Find in page"
+                   onAction="#findNext"
+                   prefWidth="260.0"
+                   styleClass="find-field"/>
+        <Label fx:id="resultLabel" text="" styleClass="find-result"/>
+        <CheckBox fx:id="matchCase" text="Match case"/>
+        <Button text="↑" onAction="#findPrevious" styleClass="find-button"/>
+        <Button text="↓" onAction="#findNext" styleClass="find-button"/>
+        <Button text="×" onAction="#close" styleClass="find-button"/>
+    </children>
+</HBox>
