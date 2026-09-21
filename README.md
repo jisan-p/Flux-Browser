@@ -63,6 +63,7 @@ mvn javafx:run -Djavafx.args="--url=https://github.com/"
 - **Native WebKit** — WKWebView for full web compatibility on macOS
 - **Tabbed browsing** — independent tabs, popup handling, session restore
 - **Navigation** — Back / Forward / Reload / Home / Stop, URL & search bar
+- **Search Plugins** — quick-search shortcuts in address bar (e.g., `!yt`, `!w`, `!gh`)
 - **Bookmarks & History** — toggle, edit, search (PostgreSQL)
 - **Speed Dial** — editable start-page shortcuts
 - **Workspaces** — organize tabs into groups

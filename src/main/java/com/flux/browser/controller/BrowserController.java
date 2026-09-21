@@ -715,6 +715,7 @@ public final class BrowserController {
     @FXML private void pdfNext() { pdfAction("pdfNext"); }
     @FXML private void pdfZoomIn() { pdfAction("pdfZoomIn"); }
     @FXML private void pdfZoomOut() { pdfAction("pdfZoomOut"); }
+    @FXML private void pdfDownload() { if (currentPage() instanceof NativeWebPage n) n.action("download", currentUrl()); }
     private void pdfAction(String action) { if (currentPage() instanceof NativeWebPage n) n.action(action, ""); }
     public void saveSession() { if (!closed && sessionReady && !restoring && sessionEnabled) sessionDelay.playFromStart(); }
     private FeatureStore.SavedTab savedTab(Tab t) { return new FeatureStore.SavedTab(workspaces.get(t), t.page().locationProperty().get(), t.page().titleProperty().get(), t.page().zoom()); }

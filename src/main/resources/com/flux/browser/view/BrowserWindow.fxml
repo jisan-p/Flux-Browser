@@ -80,7 +80,7 @@
                         <ProgressBar fx:id="loadProgress" progress="0" maxWidth="Infinity" prefHeight="2" minHeight="2" maxHeight="2" StackPane.alignment="BOTTOM_CENTER" mouseTransparent="true" styleClass="page-progress"/>
                     </StackPane>
                     <HBox fx:id="documentBar" visible="false" managed="false" spacing="10" style="-fx-padding:8;" alignment="CENTER_LEFT">
-                        <Label text="PDF viewer"/><Button text="Previous page" onAction="#pdfPrevious"/><Button text="Next page" onAction="#pdfNext"/><Button text="−" onAction="#pdfZoomOut"/><Button text="+" onAction="#pdfZoomIn"/>
+                        <Label text="PDF viewer"/><Button text="Previous page" onAction="#pdfPrevious"/><Button text="Next page" onAction="#pdfNext"/><Button text="−" onAction="#pdfZoomOut"/><Button text="+" onAction="#pdfZoomIn"/><Button text="Download" onAction="#pdfDownload"/>
                     </HBox>
                     <Label fx:id="toastText" visible="false" managed="false" wrapText="true" maxWidth="Infinity" styleClass="toast-notice"/>
                 </VBox>

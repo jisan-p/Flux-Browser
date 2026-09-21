@@ -43,6 +43,15 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
 #include "FluxViewport.h"
 #include "FluxApplicationMenu.h"
 
+@interface FluxPDFView : PDFView
+@end
+@implementation FluxPDFView
+- (void)magnifyWithEvent:(NSEvent *)event {
+    if (self.autoScales) self.autoScales = NO;
+    self.scaleFactor *= (event.magnification + 1.0);
+}
+@end
+
 @interface FluxPage : NSObject <WKNavigationDelegate, WKUIDelegate, PDFViewDelegate>
 @property(nonatomic) long long identifier;
 @property(nonatomic, strong) FluxContextWebView *web;
@@ -352,7 +361,7 @@ JNIEXPORT void JNICALL JNI(command)(JNIEnv *env, jclass cls, jlong identifier, j
                     if (p.disposed || version != p.documentVersion) return;
                     if (!doc) { emit(identifier,@"error",@"Could not open PDF",0,0); return; }
                     [p.pdf removeFromSuperview];
-                    p.pdf = [[PDFView alloc] initWithFrame:p.viewport.bounds]; p.pdf.document = doc; p.pdf.delegate = p; p.pdf.autoScales = YES;
+                    p.pdf = [[FluxPDFView alloc] initWithFrame:p.viewport.bounds]; p.pdf.document = doc; p.pdf.delegate = p; p.pdf.autoScales = YES;
                     p.pdf.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
                     p.pdf.displayMode = kPDFDisplaySinglePageContinuous; p.pdfPath = argument; p.positionPdf = YES;
                     p.web.hidden = YES; p.pdf.hidden = !p.shown;
