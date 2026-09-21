@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?><?import javafx.scene.layout.*?>
+<VBox fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.HistoryPanelController" prefWidth="350" minWidth="300" maxWidth="350" visible="false" managed="false" spacing="12" styleClass="history-panel">
+ <HBox alignment="CENTER_LEFT"><Label text="HISTORY" styleClass="manager-section"/><Region HBox.hgrow="ALWAYS"/><Button text="×" onAction="#close" styleClass="text-button" accessibleText="Close history sidebar"/></HBox>
+ <TextField fx:id="search" promptText="Search history" accessibleText="Search history sidebar"/>
+ <Label fx:id="status" styleClass="muted" wrapText="true"/>
+ <ListView fx:id="recentEntries" VBox.vgrow="ALWAYS" styleClass="manager-list" accessibleText="Recent history"><placeholder><Label text="No history to show." styleClass="muted"/></placeholder></ListView>
+ <Button fx:id="openFullHistoryButton" text="Open full History view" onAction="#expand" maxWidth="Infinity" styleClass="manager-secondary"/>
+</VBox>

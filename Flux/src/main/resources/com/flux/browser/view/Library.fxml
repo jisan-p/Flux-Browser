@@ -1,25 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<VBox fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.LibraryController"
-      spacing="20" visible="false" managed="false" styleClass="library-page" stylesheets="@../style.css">
-    <HBox alignment="CENTER_LEFT">
-        <Label text="YOUR SPACE / LIBRARY" styleClass="eyebrow"/>
-        <Region HBox.hgrow="ALWAYS"/>
-        <Button text="Back to browsing  ×" onAction="#dismiss" styleClass="text-button"/>
-    </HBox>
-    <VBox spacing="9">
-        <Label fx:id="heading" text="Bookmarks" styleClass="page-title"/>
-        <Label fx:id="subtitle" text="Keep the good stuff close." styleClass="hero-subtitle"/>
-    </VBox>
-    <HBox alignment="CENTER_LEFT" spacing="12">
-        <TextField fx:id="filterField" promptText="Search titles, addresses, or folders" HBox.hgrow="ALWAYS" accessibleText="Search library"/>
-        <Button fx:id="refreshButton" text="Refresh" onAction="#refresh" styleClass="secondary-button"/>
-        <Button fx:id="addButton" text="+  Add bookmark" onAction="#add" styleClass="primary-button"/>
-        <Button fx:id="clearButton" text="Clear history" onAction="#clear" styleClass="danger-button"/>
-    </HBox>
-    <Label fx:id="resultLabel" text="Loading your library…" styleClass="muted"/>
-    <ListView fx:id="entries" VBox.vgrow="ALWAYS" styleClass="library-list" accessibleText="Saved library entries">
-        <placeholder><Label fx:id="emptyLabel" text="Nothing here yet. Your next discovery is waiting." styleClass="empty-label" wrapText="true"/></placeholder>
-    </ListView>
-</VBox>
+<?import javafx.scene.control.*?><?import javafx.scene.layout.*?>
+<BorderPane fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.LibraryController" visible="false" managed="false" styleClass="manager-page,library-page" stylesheets="@../style.css">
+ <fx:define><ToggleGroup fx:id="periods"/></fx:define>
+ <top><fx:include fx:id="managerHeader" source="ManagerHeader.fxml"/></top>
+ <left><VBox spacing="12" styleClass="manager-navigation" prefWidth="225" minWidth="190">
+  <VBox spacing="3" styleClass="manager-filter-card">
+   <TextField fx:id="filterField" promptText="Search" accessibleText="Search library"/>
+   <ToggleButton fx:id="allPeriod" text="ALL HISTORY" userData="ALL" selected="true" toggleGroup="$periods" onAction="#period" maxWidth="Infinity" styleClass="manager-filter"/>
+   <VBox fx:id="historyPeriods" spacing="3">
+    <ToggleButton text="TODAY" userData="TODAY" toggleGroup="$periods" onAction="#period" maxWidth="Infinity" styleClass="manager-filter"/>
+    <ToggleButton text="YESTERDAY" userData="YESTERDAY" toggleGroup="$periods" onAction="#period" maxWidth="Infinity" styleClass="manager-filter"/>
+    <ToggleButton text="OLDER" userData="OLDER" toggleGroup="$periods" onAction="#period" maxWidth="Infinity" styleClass="manager-filter"/>
+   </VBox>
+  </VBox>
+  <Button fx:id="clearButton" text="Clear browsing history…" onAction="#clear" styleClass="manager-primary" maxWidth="Infinity"/>
+  <Button fx:id="addButton" text="+ Add bookmark" onAction="#add" styleClass="manager-primary" maxWidth="Infinity"/>
+  <Button fx:id="historySidebarButton" text="Open history sidebar" onAction="#sidebar" styleClass="manager-secondary" maxWidth="Infinity"/>
+  <Button fx:id="refreshButton" text="Refresh" onAction="#refresh" styleClass="manager-secondary" maxWidth="Infinity"/>
+ </VBox></left>
+ <center><VBox spacing="12" styleClass="manager-results">
+  <Label fx:id="heading" text="ALL HISTORY" styleClass="manager-section"/>
+  <Label fx:id="resultLabel" text="Loading…" styleClass="muted" wrapText="true"/>
+  <ListView fx:id="entries" VBox.vgrow="ALWAYS" styleClass="library-list,manager-list" accessibleText="Saved library entries">
+   <placeholder><VBox alignment="TOP_LEFT" styleClass="manager-empty"><Label fx:id="emptyLabel" text="No browsing history yet." wrapText="true"/></VBox></placeholder>
+  </ListView>
+ </VBox></center>
+</BorderPane>

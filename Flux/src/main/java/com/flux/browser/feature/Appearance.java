@@ -12,7 +12,7 @@ public final class Appearance {
     public boolean bigTiles;
     public String wallpaper = "Waves", image = "", music = "", font = "System", layout = "Comfortable";
     public double opacity = 0.85, wallpaperBrightness = 0.8, blur = 0, vignette = 0.35, fontSize = 13, volume = 0.2;
-    public int columns = 6;
+    public int columns = 4;
     public boolean sidebar = true, search = true, dials = true, clock, tileTitles, statusBar;
     public boolean wallpapers = true, elementBackgrounds = true, animations = true, sounds, typingSounds, musicEnabled;
     public static final List<String> THEMES = List.of("GX Classic", "Ultraviolet", "Sub Zero", "Frost", "Rose Quartz", "Mint", "Custom");

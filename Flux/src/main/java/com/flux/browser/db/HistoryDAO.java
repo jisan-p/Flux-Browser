@@ -26,14 +26,21 @@ public final class HistoryDAO {
     }
 
     public CompletableFuture<List<HistoryEntry>> getHistory(String filter) {
+        return getHistory(filter, new com.flux.browser.feature.BrowsingPeriod.Range(null, null));
+    }
+    public CompletableFuture<List<HistoryEntry>> getHistory(String filter, com.flux.browser.feature.BrowsingPeriod.Range range) {
         return database.read(connection -> {
             try (var statement = connection.prepareStatement("""
                     SELECT id, title, url, visit_timestamp FROM history
                     WHERE position(lower(?) in lower(title || ' ' || url)) > 0
-                    ORDER BY visit_timestamp DESC, id DESC LIMIT ?
-                    """)) {
+                    """ + (range.from() == null ? "" : " AND visit_timestamp >= ?")
+                    + (range.until() == null ? "" : " AND visit_timestamp < ?")
+                    + " ORDER BY visit_timestamp DESC, id DESC LIMIT ?")) {
                 statement.setString(1, filter.trim());
-                statement.setInt(2, DISPLAY_LIMIT);
+                int parameter = 2;
+                if (range.from() != null) statement.setTimestamp(parameter++, java.sql.Timestamp.from(range.from()));
+                if (range.until() != null) statement.setTimestamp(parameter++, java.sql.Timestamp.from(range.until()));
+                statement.setInt(parameter, DISPLAY_LIMIT);
                 try (var result = statement.executeQuery()) {
                     List<HistoryEntry> entries = new ArrayList<>();
                     while (result.next()) entries.add(new HistoryEntry(result.getLong("id"), result.getString("title"),

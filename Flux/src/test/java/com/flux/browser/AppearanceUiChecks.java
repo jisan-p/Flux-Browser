@@ -39,6 +39,7 @@ public final class AppearanceUiChecks {
             fx(()->{browser.easySetup();return null;});
             await(()->fx(()->node("easySetup").isVisible()),"Easy Setup opens");
             fx(()->{browser.closeEasySetup();return null;});Thread.sleep(4200);
+            fx(()->{browser.home();return null;});
             screenshot("gx-home");
             polishChecks();
             BrowserChecks.check(fx(()->browser.currentPage()==null),"appearance does not allocate a web engine on Home");

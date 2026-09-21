@@ -90,6 +90,8 @@
                     <fx:include fx:id="library" source="Library.fxml"/>
                     <fx:include fx:id="settings" source="Settings.fxml"/>
                     <fx:include fx:id="features" source="Features.fxml"/>
+                    <fx:include fx:id="downloadsPage" source="Downloads.fxml"/>
+                    <fx:include fx:id="historyPanel" source="HistoryPanel.fxml"/>
                 </StackPane></center><right><fx:include fx:id="easySetup" source="EasySetup.fxml"/></right></BorderPane>
             </center>
             <bottom>

@@ -10,8 +10,8 @@ import javafx.scene.control.Label;
 
 public final class LibraryRowController {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("MMM d, yyyy · HH:mm").withZone(ZoneId.systemDefault());
-    @FXML private Label iconLabel, titleLabel, urlLabel, categoryLabel, dateLabel;
-    @FXML private Button openButton, editButton;
+    @FXML private Label dayHeading, iconLabel, titleLabel, urlLabel, categoryLabel, dateLabel;
+    @FXML private Button openButton, editButton, deleteButton;
     private BrowserController browser;
     private LibraryController library;
     private Object item;
@@ -31,12 +31,16 @@ public final class LibraryRowController {
             dateLabel.setText(DATE.format(entry.createdAt())); iconLabel.setText("☆");
         } else if (item instanceof HistoryEntry entry) {
             titleLabel.setText(entry.title()); url = entry.url(); categoryLabel.setText("VISITED");
-            dateLabel.setText(DATE.format(entry.visitedAt())); iconLabel.setText("↗");
+            dateLabel.setText(DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(entry.visitedAt())); iconLabel.setText("↗");
+            dayHeading.setText(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy").withZone(ZoneId.systemDefault()).format(entry.visitedAt()));
         }
+        categoryLabel.setVisible(bookmark); categoryLabel.setManaged(bookmark);
         urlLabel.setText(url);
         openButton.setAccessibleText("Open " + titleLabel.getText());
     }
 
+    public void compact() { editButton.setVisible(false); editButton.setManaged(false); deleteButton.setVisible(false); deleteButton.setManaged(false); }
+    public void dateHeading(boolean visible) { dayHeading.setVisible(visible); dayHeading.setManaged(visible); }
     @FXML private void open() { if (browser != null) browser.navigateTo(url); }
     @FXML private void edit() { if (browser != null && item instanceof Bookmark bookmark) browser.editBookmark(bookmark, library::refresh); }
     @FXML private void delete() {

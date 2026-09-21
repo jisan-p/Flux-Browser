@@ -19,7 +19,7 @@ Open **Easy Setup** using the sliders icon at the right of the address bar, the 
 | Audio | Optional original click and address-bar typing sounds; local background music with a volume control. Music pauses when the window is minimized. Sounds and music default to off. |
 | Presets | Save, apply and remove up to 20 named appearance presets. Export/import the versioned Flux JSON format and reset to defaults. Imported/exported presets omit local media paths and do not activate background music. |
 
-The default is dark GX Classic with Waves, charcoal browser chrome with purple selection, Comfortable content spacing, six maximum tile columns, hidden tile captions, and no audio. Theme highlight/background controls continue to customize the GX wallpaper, window contour and content panels; the toolbar and sidebar retain their neutral reference palette and adapt to Light/Dark/Auto mode. Stored Speed Dial entries remain yours; Opera’s sponsored shortcuts are not imported.
+The default is dark GX Classic with Waves, charcoal browser chrome with purple selection, Comfortable content spacing, four maximum tile columns, hidden tile captions, and no audio. Theme highlight/background controls continue to customize the GX wallpaper, window contour and content panels; the toolbar and sidebar retain their neutral reference palette and adapt to Light/Dark/Auto mode. Stored Speed Dial entries remain yours; Opera’s sponsored shortcuts are not imported.
 
 ## Persistence and resources
 
@@ -67,3 +67,24 @@ Settings now has a category sidebar, search with empty-result feedback, theme pr
 ![Flux Settings](images/flux-gx-settings.png)
 
 ![Tab context menu](images/flux-gx-tab-menu.png)
+
+## Downloads, History and Speed Dial reference pages
+
+The supplied PNG of Figma section `670:27` guides the internal managers: centered page navigation, a narrow left filter card, compact results and accent-colored controls. Downloads and History have full pages; Bookmarks shares the same library layout. Existing Settings remains accessible from their header.
+
+- **Downloads:** search filenames/paths, filter All/Today/Yesterday/Older and file type, see live progress, cancel, reveal completed files in Finder or open completed PDFs. **Clear finished downloads** removes only completed/cancelled/failed list entries; it does not delete files or cancel active transfers. Entries remain session-only, with their initial timestamp retained across progress events.
+- **History:** text search, local-day filters, dated groups, individual deletion and confirmed clear-all. Date ranges are applied in PostgreSQL before the 500-result cap. **Open history sidebar** shows the compact view alongside the current page; **Open full History view** returns to the manager. Escape closes the sidebar. Native content reflows beside it.
+- **Speed Dial:** wider search and tiles, a plus tile in the grid, and a four-column default for new profiles. Existing saved column preferences remain in effect. The GX wallpaper, 46 px sidebar, button sizes and outer gaps are preserved.
+
+Opera's gaming/news feed and sponsored tile content are not imported. The reference PNG is used for layout; all rows shown in tests are disposable fixtures. Managers use real Flux history/downloads in normal browsing.
+
+`ManagerChecks` covers date/DST boundaries and download-state filtering. `ManagerUiChecks` uses a temporary profile, local HTTP fixture and an explicitly selected disposable `flux_test` database. It checks date filtering beyond 500 newer entries, search, file-type filters, live updates, clear-list semantics, compact layout, and History sidebar/native viewport restoration.
+
+```sh
+FLUX_TEST_DB_URL=jdbc:postgresql://127.0.0.1:55439/flux_test \
+  mvn -q -Pmodule-ui-check -Dflux.mainClass=com.flux.browser/com.flux.browser.ManagerUiChecks test-compile javafx:run
+```
+
+![Downloads page with test fixtures](images/flux-downloads.png)
+
+![History page with test fixture](images/flux-history.png)

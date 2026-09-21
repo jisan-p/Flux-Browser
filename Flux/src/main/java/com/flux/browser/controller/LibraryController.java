@@ -5,20 +5,26 @@ import com.flux.browser.db.HistoryDAO;
 import com.flux.browser.util.Dialogs;
 import com.flux.browser.util.Views;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.BorderPane;
+import com.flux.browser.feature.BrowsingPeriod;
 import javafx.util.Duration;
 
 public final class LibraryController {
-    @FXML private VBox root;
-    @FXML private Label heading, subtitle, resultLabel, emptyLabel;
+    @FXML private BorderPane root;
+    @FXML private VBox historyPeriods;
+    @FXML private javafx.scene.Parent managerHeader;
+    @FXML private ManagerHeaderController managerHeaderController;
+    @FXML private ToggleGroup periods;
+    @FXML private ToggleButton allPeriod;
+    @FXML private Label heading, resultLabel, emptyLabel;
     @FXML private TextField filterField;
-    @FXML private Button addButton, clearButton;
+    @FXML private Button addButton, clearButton, historySidebarButton;
     @FXML private ListView<Object> entries;
     private final PauseTransition debounce = new PauseTransition(Duration.millis(200));
     private BrowserController browser;
@@ -29,13 +35,13 @@ public final class LibraryController {
 
     public void configure(BrowserController browser, BookmarkDAO bookmarks, HistoryDAO history) {
         this.browser = browser;
+        managerHeaderController.configure(browser);
         this.bookmarks = bookmarks;
         this.history = history;
         debounce.setOnFinished(event -> refresh());
         filterField.textProperty().addListener((observable, before, after) -> debounce.playFromStart());
         entries.setCellFactory(list -> new ListCell<>() {
             private Views.View<LibraryRowController> row;
-            private Object renderedItem;
             @Override protected void updateItem(Object item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(null);
@@ -45,10 +51,11 @@ public final class LibraryController {
                     ((javafx.scene.layout.Region) row.root()).prefWidthProperty().bind(widthProperty().subtract(20));
                     setPrefWidth(0);
                 }
-                if (!Objects.equals(renderedItem, item)) {
-                    row.controller().configure(browser, LibraryController.this, item);
-                    renderedItem = item;
-                }
+                row.controller().configure(browser, LibraryController.this, item);
+                boolean firstOfDay = item instanceof com.flux.browser.model.HistoryEntry h && (getIndex() <= 0 ||
+                        !(getListView().getItems().get(getIndex() - 1) instanceof com.flux.browser.model.HistoryEntry previous) ||
+                        !h.visitedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDate().equals(previous.visitedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDate()));
+                row.controller().dateHeading(firstOfDay);
                 setGraphic(row.root());
             }
         });
@@ -57,11 +64,15 @@ public final class LibraryController {
     public void show(boolean bookmarkMode) {
         if (this.bookmarkMode != bookmarkMode) entries.getItems().clear();
         this.bookmarkMode = bookmarkMode;
-        heading.setText(bookmarkMode ? "Bookmarks" : "History");
-        subtitle.setText(bookmarkMode ? "Keep the good stuff close." : "Retrace your steps. Rediscover something good.");
+        managerHeaderController.select(managerHeader, bookmarkMode ? "Bookmarks" : "History");
+        periods.selectToggle(allPeriod);
+        allPeriod.setText(bookmarkMode ? "ALL BOOKMARKS" : "ALL HISTORY");
+        historyPeriods.setVisible(!bookmarkMode); historyPeriods.setManaged(!bookmarkMode);
+        heading.setText(allPeriod.getText());
         filterField.setPromptText(bookmarkMode ? "Search titles, addresses, or folders" : "Search visited titles or addresses");
         addButton.setVisible(bookmarkMode); addButton.setManaged(bookmarkMode);
         clearButton.setVisible(!bookmarkMode); clearButton.setManaged(!bookmarkMode);
+        historySidebarButton.setVisible(!bookmarkMode); historySidebarButton.setManaged(!bookmarkMode);
         filterField.clear();
         debounce.stop();
         refresh();
@@ -81,7 +92,7 @@ public final class LibraryController {
         }
         resultLabel.setText("Loading your library…");
         emptyLabel.setText("Loading…");
-        CompletableFuture<? extends List<?>> future = bookmarkMode ? bookmarks.getBookmarks(filterField.getText()) : history.getHistory(filterField.getText());
+        CompletableFuture<? extends List<?>> future = bookmarkMode ? bookmarks.getBookmarks(filterField.getText()) : history.getHistory(filterField.getText(), selectedPeriod().range());
         future.whenComplete((items, error) -> Platform.runLater(() -> {
             if (version != request || browser.isClosed() || !root.isVisible()) return;
             browser.storageChanged();
@@ -91,13 +102,22 @@ public final class LibraryController {
                 emptyLabel.setText(BrowserController.friendlyError(error));
             } else {
                 if (!entries.getItems().equals(items)) entries.getItems().setAll(items);
-                resultLabel.setText(items.size() + (bookmarkMode ? " saved destinations" : " visits · newest first")
+                resultLabel.setText(items.size() + (bookmarkMode ? " saved destinations" : (items.size() == 1 ? " visit · newest first" : " visits · newest first"))
                         + (items.size() == 500 ? " · Showing up to 500 matches; narrow your search for older items." : ""));
-                emptyLabel.setText(filterField.getText().isBlank() ? "Nothing here yet. Your next discovery is waiting." : "No matches. Try another title, address, or folder.");
+                emptyLabel.setText(filterField.getText().isBlank() ? (bookmarkMode ? "No bookmarks yet. Save a page to find it here." : "No history in this period.") : "No matches. Try another search or period.");
             }
         }));
     }
 
+    private BrowsingPeriod selectedPeriod() {
+        return periods.getSelectedToggle() == null ? BrowsingPeriod.ALL : BrowsingPeriod.valueOf(periods.getSelectedToggle().getUserData().toString());
+    }
+    @FXML private void period() {
+        if (periods.getSelectedToggle() == null) periods.selectToggle(allPeriod);
+        heading.setText(((ToggleButton) periods.getSelectedToggle()).getText());
+        debounce.stop(); refresh();
+    }
+    @FXML private void sidebar() { browser.openHistoryPanel(); }
     @FXML private void add() { if (browser != null) browser.editBookmark(null, this::refresh); }
     @FXML private void clear() {
         if (browser != null && Dialogs.confirm(browser.window(), "Clear browsing history?", "This removes all saved visits, including entries outside the current search. Your bookmarks and Speed Dial stay saved.")) {

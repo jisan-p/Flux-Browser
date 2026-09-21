@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<HBox fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.LibraryRowController"
-      alignment="CENTER_LEFT" spacing="14" minWidth="0" styleClass="library-row" stylesheets="@../style.css">
+<VBox fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.LibraryRowController"
+      spacing="0" minWidth="0" styleClass="library-entry" stylesheets="@../style.css">
+    <Label fx:id="dayHeading" styleClass="manager-day" visible="false" managed="false"/>
+    <HBox alignment="CENTER_LEFT" spacing="12" styleClass="library-row">
     <Label fx:id="iconLabel" text="↗" styleClass="row-icon"/>
     <Button fx:id="openButton" onAction="#open" minWidth="0" maxWidth="Infinity" HBox.hgrow="ALWAYS" alignment="CENTER_LEFT" styleClass="row-open">
         <graphic>
@@ -12,10 +14,11 @@
             </VBox>
         </graphic>
     </Button>
-    <VBox spacing="6" minWidth="145" maxWidth="175" alignment="CENTER_RIGHT">
+    <VBox spacing="6" minWidth="80" maxWidth="140" alignment="CENTER_RIGHT">
         <Label fx:id="categoryLabel" text="Unsorted" styleClass="category-label" maxWidth="175"/>
         <Label fx:id="dateLabel" text="Sep 11, 20:24" styleClass="date-label"/>
     </VBox>
     <Button fx:id="editButton" text="Edit" onAction="#edit" styleClass="text-button"/>
     <Button fx:id="deleteButton" text="×" onAction="#delete" styleClass="row-delete" accessibleText="Delete entry"/>
 </HBox>
+</VBox>

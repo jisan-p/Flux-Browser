@@ -28,7 +28,7 @@ public final class SpeedDialController {
     @FXML private ScrollPane root;
     @FXML private VBox background, homeContent, dialSection;
     @FXML private HBox searchBox, clockRow;
-    @FXML private Label clockLabel, dateLabel, dialCount, dialNote;
+    @FXML private Label clockLabel, dateLabel, dialNote;
     @FXML private TextField searchField;
     @FXML private Button addDialButton;
     @FXML private TilePane tiles;
@@ -54,6 +54,7 @@ public final class SpeedDialController {
         clock = new Timeline(new KeyFrame(Duration.minutes(1), event -> updateClock()));
         clock.setCycleCount(Timeline.INDEFINITE);
         root.viewportBoundsProperty().addListener((o,before,after) -> { background.setMinHeight(after.getHeight()); layoutTiles(after.getWidth()); });
+        homeContent.paddingProperty().addListener(o -> layoutTiles(root.getViewportBounds().getWidth()));
         applyAppearance();
     }
 
@@ -80,9 +81,9 @@ public final class SpeedDialController {
         if(browser==null || width<=0)return;
         var a=browser.preferences().appearance;
         int columns=a.columns;
-        double tile=a.bigTiles?184:144;
-        tiles.setPrefTileWidth(tile);tiles.setPrefTileHeight(a.bigTiles?138:112);
-        double available=Math.max(120,Math.min(1100,width-64));
+        double tile=a.bigTiles?224:184;
+        tiles.setPrefTileWidth(tile);tiles.setPrefTileHeight(a.bigTiles?162:138);
+        double available=Math.max(120,Math.min(homeContent.getMaxWidth(),width)-homeContent.getPadding().getLeft()-homeContent.getPadding().getRight());
         int fit=Math.max(1,Math.min(columns,(int)((available+18)/(tile+18))));
         tiles.setMaxWidth(fit*(tile+18)-18);tiles.setPrefColumns(fit);
     }
@@ -149,10 +150,10 @@ public final class SpeedDialController {
             nextViews.put(item, node);
             nodes.add(node);
         }
+        nodes.add(addDialButton);
         tiles.getChildren().setAll(nodes);
         tileViews = nextViews;
         renderedItems = List.copyOf(items);
-        dialCount.setText(String.format("%02d", items.size()));
     }
 
     @FXML private void search() { if (browser != null) browser.navigateTo(searchField.getText()); }

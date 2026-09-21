@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?><?import javafx.scene.layout.*?>
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.DownloadRowController" spacing="8" styleClass="download-row">
+ <HBox alignment="CENTER_LEFT" spacing="14">
+  <Label fx:id="kind" styleClass="download-kind" minWidth="52"/>
+  <VBox spacing="5" minWidth="0" HBox.hgrow="ALWAYS"><Label fx:id="name" styleClass="row-title" maxWidth="Infinity"/><Label fx:id="detail" styleClass="muted" wrapText="true"/></VBox>
+  <Button fx:id="openButton" text="Open PDF" onAction="#open" styleClass="manager-secondary"/>
+  <Button fx:id="revealButton" text="Show in Finder" onAction="#reveal" styleClass="manager-secondary"/>
+  <Button fx:id="cancelButton" text="Cancel" onAction="#cancel" styleClass="text-button"/>
+ </HBox>
+ <ProgressBar fx:id="progress" maxWidth="Infinity" prefHeight="3" maxHeight="3" styleClass="download-progress"/>
+</VBox>

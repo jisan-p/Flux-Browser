@@ -43,6 +43,12 @@ public final class FeaturesController {
         
         providers.getSelectionModel().selectedItemProperty().addListener((o,a,p)->{if(p!=null){keyword.setText(p.keyword());providerName.setText(p.name());providerUrl.setText(p.template());}});
         downloads.setItems(browser.downloads().items);
+        featureTabs.getSelectionModel().selectedItemProperty().addListener((o,before,after)->{
+            if (after!=null && after.getText().equals("Downloads") && root.isVisible()) {
+                browser.showDownloads();
+                featureTabs.getSelectionModel().select(before==null?featureTabs.getTabs().getFirst():before);
+            }
+        });
         if(!NativeWebPage.enabled()){blocker.setDisable(true);https.setDisable(true);phishing.setDisable(true);}
         textResults.setCellFactory(v->new ListCell<>(){@Override protected void updateItem(HistoryEntry h,boolean empty){super.updateItem(h,empty);setText(empty||h==null?null:h.title()+"\n"+h.url());}});
     }
@@ -81,6 +87,7 @@ public final class FeaturesController {
         })));
     }
     @FXML private void translate() { try { browser.openNewUrl(PageActions.translation(browser.currentUrl(), language.getValue())); } catch(Exception e) { error(e); } }
+    @FXML private void showDownloads() { browser.showDownloads(); }
     @FXML private void openPdf(){FileChooser chooser=new FileChooser();chooser.setTitle("Open PDF");chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF documents","*.pdf"));var file=chooser.showOpenDialog(browser.window());if(file!=null)browser.openPdf(file.toPath());}
     @FXML private void cancelDownload(){var d=downloads.getSelectionModel().getSelectedItem();if(d!=null)NativeWebPage.downloadAction(d.id(),"cancel");}
     @FXML private void revealDownload(){var d=downloads.getSelectionModel().getSelectedItem();if(d!=null && d.status().equals("Complete"))NativeWebPage.downloadAction(d.id(),"reveal");}

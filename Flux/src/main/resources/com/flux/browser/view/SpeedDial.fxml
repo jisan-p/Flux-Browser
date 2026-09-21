@@ -7,15 +7,16 @@
 <SeparatorMenuItem/><MenuItem text="Easy Setup" onAction="#customize"/><MenuItem text="Settings" onAction="#settings"/>
 </items></ContextMenu></fx:define>
  <content><VBox fx:id="background" alignment="TOP_CENTER" styleClass="home-background">
-  <VBox fx:id="homeContent" alignment="TOP_CENTER" maxWidth="1160" spacing="36" styleClass="home-content">
+  <VBox fx:id="homeContent" alignment="TOP_CENTER" maxWidth="1060" spacing="60" styleClass="home-content">
    <HBox fx:id="clockRow" alignment="CENTER" spacing="16"><Label fx:id="clockLabel" styleClass="home-clock"/><Label fx:id="dateLabel" styleClass="status-meta"/></HBox>
-   <HBox fx:id="searchBox" alignment="CENTER_LEFT" spacing="14" maxWidth="640" styleClass="home-search">
+   <HBox fx:id="searchBox" alignment="CENTER_LEFT" spacing="14" maxWidth="820" styleClass="home-search">
     <Label text="⌕" styleClass="search-symbol"/><TextField fx:id="searchField" promptText="Search the web" onAction="#search" HBox.hgrow="ALWAYS" styleClass="home-search-input" accessibleText="Search or enter a website"/>
     <Button text="→" onAction="#search" styleClass="search-go" accessibleText="Search"/>
    </HBox>
    <VBox fx:id="dialSection" alignment="TOP_CENTER" spacing="12">
-    <HBox fx:id="dialHeading" alignment="CENTER_LEFT" spacing="10"><Label text="SPEED DIAL" styleClass="section-heading"/><Label fx:id="dialCount" text="06" styleClass="count-badge"/><Region HBox.hgrow="ALWAYS"/><Button fx:id="addDialButton" text="+  Add a site" onAction="#add" styleClass="text-button"/></HBox>
-    <TilePane fx:id="tiles" alignment="TOP_CENTER" prefColumns="6" prefTileWidth="144" prefTileHeight="112" hgap="18" vgap="18"/>
+    <TilePane fx:id="tiles" alignment="TOP_LEFT" tileAlignment="TOP_LEFT" prefColumns="4" prefTileWidth="184" prefTileHeight="138" hgap="18" vgap="18">
+     <fx:define><Button fx:id="addDialButton" text="+" onAction="#add" maxWidth="Infinity" maxHeight="Infinity" styleClass="add-dial-tile" accessibleText="Add a site"><tooltip><Tooltip text="Add a site"/></tooltip></Button></fx:define>
+    </TilePane>
     <Label fx:id="dialNote" styleClass="muted" wrapText="true"/>
    </VBox>
    <Region VBox.vgrow="ALWAYS"/>

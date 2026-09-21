@@ -9,6 +9,7 @@ import java.util.*;
 /** Deterministic checks use a temporary profile, never the user's browsing data or vault. */
 public final class FeatureChecks {
     public static void run() throws Exception {
+        ManagerChecks.run();
         var state = new FeatureStore.State();
         var appearance = new Appearance();
         appearance.accent="red; -fx-background-image:url(https://invalid.test)";

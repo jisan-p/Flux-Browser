@@ -36,7 +36,8 @@ import javafx.util.Duration;
 public final class BrowserController {
     private record Tab(WebTabController page, Parent content, TabHeaderController header, Parent chip) {}
     @FXML private StackPane root;
-    @FXML private Parent sidebar, easySetup;
+    @FXML private Parent sidebar, easySetup, historyPanel;
+    @FXML private HistoryPanelController historyPanelController;
     @FXML private EasySetupController easySetupController;
     @FXML private HBox statusBar;
     @FXML private com.flux.browser.ui.WallpaperCanvas wallpaperCanvas;
@@ -50,7 +51,8 @@ public final class BrowserController {
     @FXML private StackPane tabHost, contentHost;
     @FXML private BorderPane contentLayout;
     @FXML private ScrollPane tabScroll;
-    @FXML private Parent library, settings, features;
+    @FXML private Parent library, settings, features, downloadsPage;
+    @FXML private DownloadsController downloadsPageController;
     @FXML private FeaturesController featuresController;
     @FXML private HBox documentBar;
     @FXML private Button newTabButton, workspacesButton;
@@ -94,6 +96,8 @@ public final class BrowserController {
         libraryController.configure(this, bookmarkDAO, historyDAO);
         settingsController.configure(this);
         featuresController.configure(this);
+        downloadsPageController.configure(this);
+        historyPanelController.configure(this);
         easySetupController.configure(this);
         root.getStylesheets().add(Views.class.getResource("/com/flux/browser/gx.css").toExternalForm());
         wallpaperCanvas.widthProperty().bind(root.widthProperty()); wallpaperCanvas.heightProperty().bind(root.heightProperty());
@@ -290,7 +294,7 @@ public final class BrowserController {
     @FXML public void home() { if (active != null) { dismissPanels(); active.page().home(); refreshChrome(); } }
     @FXML private void back() { if (panelsVisible()) dismissPanels(); else if (active != null) active.page().back(); }
     @FXML private void forward() { dismissPanels(); if (active != null) active.page().forward(); }
-    @FXML private void reload() { if (library.isVisible()) libraryController.refresh(); else if (active != null) active.page().reload(); }
+    @FXML private void reload() { if (library.isVisible()) libraryController.refresh(); else if (downloadsPage.isVisible()) downloadsPageController.refresh(); else if (active != null) active.page().reload(); }
     @FXML private void stopLoading() { if (active != null) active.page().stop(); }
 
     public void tabChanged(WebTabController page) { if (closed) return; saveSession(); if (active != null && active.page() == page) chromeRefresh.start(); }
@@ -311,7 +315,7 @@ public final class BrowserController {
         tabCount.setText(count + (count == 1 ? " TAB" : " TABS") + (preferences.workspaces.size() > 1 ? " · " + preferences.workspace : ""));
         visible(documentBar, !panelsVisible() && currentPage() instanceof NativeWebPage n && n.pdf.get());
         stage.setTitle(page.titleProperty().get() + " · Flux");
-        if (!panelsVisible()) sidebarController.select(page.isHome() ? "home" : "");
+        if (!panelsVisible()) sidebarController.select(historyPanel.isVisible() ? "history" : page.isHome() ? "home" : "");
         updateBookmark(false);
         if (toast.getStatus() != Animation.Status.RUNNING) updateStatus();
     }
@@ -389,29 +393,29 @@ public final class BrowserController {
     private void refreshDials() { for (Tab tab : tabs) tab.page().refreshDials(); }
 
     public void showLibrary(boolean bookmarks) {
-        closeEasySetup();
-        visible(features, false); visible(settings, false); visible(library, true); tabHost.setVisible(false);
+        closeHistoryPanel(); closeEasySetup();
+        visible(downloadsPage, false); visible(features, false); visible(settings, false); visible(library, true); tabHost.setVisible(false);
         updateActiveContent();
         libraryController.show(bookmarks);
         sidebarController.select(bookmarks ? "bookmarks" : "history");
         refreshChrome();
     }
     @FXML public void settings() {
-        closeEasySetup();
-        visible(features, false); visible(library, false); visible(settings, true); tabHost.setVisible(false);
+        closeHistoryPanel(); closeEasySetup();
+        visible(downloadsPage, false); visible(features, false); visible(library, false); visible(settings, true); tabHost.setVisible(false);
         updateActiveContent();
         settingsController.show(active == null ? 1 : active.page().zoom());
         sidebarController.select("settings");
         refreshChrome();
     }
     public void dismissPanels() {
-        closeEasySetup();
-        visible(features, false); visible(library, false); visible(settings, false); tabHost.setVisible(true);
+        closeHistoryPanel(); closeEasySetup();
+        visible(downloadsPage, false); visible(features, false); visible(library, false); visible(settings, false); tabHost.setVisible(true);
         updateActiveContent();
         if (active != null) active.page().focus();
         refreshChrome();
     }
-    private boolean panelsVisible() { return library.isVisible() || settings.isVisible() || features.isVisible(); }
+    private boolean panelsVisible() { return library.isVisible() || settings.isVisible() || features.isVisible() || downloadsPage.isVisible(); }
     private void updateActiveContent() { if (active != null) active.page().setActive(!panelsVisible() && !stage.isIconified()); }
     private static void visible(Node node, boolean visible) { node.setVisible(visible); node.setManaged(visible); }
     public void setAccent(boolean cyan) {
@@ -420,6 +424,7 @@ public final class BrowserController {
         applyAppearance(); saveSession();
     }
     @FXML public void easySetup() {
+        closeHistoryPanel();
         if (!sessionReady) { message("Loading browser preferences…"); return; }
         if(easySetup.isVisible()) { closeEasySetup(); return; }
         // Home can show a matching overlay. WKWebView needs a separate layout region so Cocoa never covers the controls.
@@ -428,6 +433,17 @@ public final class BrowserController {
             StackPane.setAlignment(easySetup,javafx.geometry.Pos.TOP_RIGHT);
         }
         visible(easySetup,true);easySetupController.show();
+    }
+    public void openHistoryPanel() {
+        dismissPanels();
+        contentHost.getChildren().remove(historyPanel); contentLayout.setRight(historyPanel);
+        visible(historyPanel,true); historyPanelController.refresh(); sidebarController.select("history");
+    }
+    public void closeHistoryPanel() {
+        boolean showing=historyPanel.isVisible();
+        visible(historyPanel,false);
+        if(historyPanel.getParent()!=contentHost) { contentLayout.setRight(easySetup); contentHost.getChildren().add(historyPanel); }
+        if(showing && active!=null) { refreshChrome(); active.page().focus(); }
     }
     public void closeEasySetup() {
         visible(easySetup,false);
@@ -542,7 +558,7 @@ public final class BrowserController {
                 case LEFT -> back(); case RIGHT -> forward(); case HOME -> home(); default -> handled = false;
             }
         } else if (event.getCode() == KeyCode.ESCAPE) {
-            if (easySetup.isVisible()) closeEasySetup(); else if (panelsVisible()) dismissPanels(); else stopLoading();
+            if (historyPanel.isVisible()) closeHistoryPanel(); else if (easySetup.isVisible()) closeEasySetup(); else if (panelsVisible()) dismissPanels(); else stopLoading();
         } else if (event.getCode() == KeyCode.F5) reload();
         else handled = false;
         if (handled) event.consume();
@@ -621,11 +637,15 @@ public final class BrowserController {
             message(error == null ? result : "Developer Tools could not open for this tab. Try again after the page finishes loading.");
         }));
     }
-    public void featureSection(String name) { features(); featuresController.selectSection(name); }
+    public void showDownloads() {
+        closeHistoryPanel(); closeEasySetup(); visible(library,false); visible(settings,false); visible(features,false); visible(downloadsPage,true); tabHost.setVisible(false);
+        updateActiveContent(); downloadsPageController.show(); sidebarController.select("downloads"); refreshChrome();
+    }
+    public void featureSection(String name) { if ("Downloads".equals(name)) showDownloads(); else { features(); featuresController.selectSection(name); } }
     @FXML public void features() {
-        closeEasySetup();
+        closeHistoryPanel(); closeEasySetup();
         if (!sessionReady) { message("Loading browser preferences…"); return; }
-        visible(library, false); visible(settings, false); visible(features, true); tabHost.setVisible(false);
+        visible(downloadsPage, false); visible(library, false); visible(settings, false); visible(features, true); tabHost.setVisible(false);
         updateActiveContent(); featuresController.show(); refreshChrome();
     }
     @FXML private void pdfPrevious() { pdfAction("pdfPrevious"); }
@@ -681,7 +701,7 @@ public final class BrowserController {
         if (closed) return;
         persistSession(); sessionDelay.stop(); appearanceRefresh.stop(); easySetupController.close(); wallpaperCanvas.dispose(); chromeContour.dispose(); soundscape.close(); if(systemTheme!=null)systemTheme.close(); featuresController.close(); store.close();
         if (NativeWebPage.enabled()) NativeWebPage.shutdownServices();
-        closed = true; bookmarkRequest++; toast.stop(); chromeRefresh.stop(); libraryController.dispose();
+        closed = true; bookmarkRequest++; toast.stop(); chromeRefresh.stop(); libraryController.dispose(); downloadsPageController.dispose(); historyPanelController.dispose();
         for (Tab tab : tabs) { tab.header().dispose(); tab.page().dispose(); }
         tabs.clear();
         tabHost.getChildren().clear();

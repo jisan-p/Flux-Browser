@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?><?import javafx.scene.layout.*?>
+<BorderPane fx:id="root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.DownloadsController" visible="false" managed="false" styleClass="manager-page,downloads-page" stylesheets="@../style.css">
+ <fx:define><ToggleGroup fx:id="periods"/><ToggleGroup fx:id="types"/></fx:define>
+ <top><fx:include fx:id="managerHeader" source="ManagerHeader.fxml"/></top>
+ <left><VBox spacing="12" styleClass="manager-navigation" prefWidth="225" minWidth="190">
+  <VBox spacing="3" styleClass="manager-filter-card">
+   <TextField fx:id="downloadSearch" promptText="Search downloads" accessibleText="Search downloads"/>
+   <ToggleButton fx:id="allPeriod" text="ALL DOWNLOADS" userData="ALL" selected="true" toggleGroup="$periods" onAction="#filter" maxWidth="Infinity" styleClass="manager-filter"/>
+   <ToggleButton text="TODAY" userData="TODAY" toggleGroup="$periods" onAction="#filter" maxWidth="Infinity" styleClass="manager-filter"/>
+   <ToggleButton text="YESTERDAY" userData="YESTERDAY" toggleGroup="$periods" onAction="#filter" maxWidth="Infinity" styleClass="manager-filter"/>
+   <ToggleButton text="OLDER" userData="OLDER" toggleGroup="$periods" onAction="#filter" maxWidth="Infinity" styleClass="manager-filter"/>
+  </VBox>
+  <Button fx:id="clearDownloadsButton" text="Clear finished downloads" onAction="#clear" maxWidth="Infinity" styleClass="manager-primary"><tooltip><Tooltip text="Removes finished entries from this list. Files stay on disk; active downloads continue."/></tooltip></Button>
+  <Button fx:id="openPdfButton" text="Open PDF…" onAction="#openPdf" maxWidth="Infinity" styleClass="manager-secondary"/>
+ </VBox></left>
+ <center><VBox spacing="12" styleClass="manager-results">
+  <Label fx:id="heading" text="ALL DOWNLOADS" styleClass="manager-section"/>
+  <FlowPane hgap="8" vgap="4" styleClass="manager-types">
+   <ToggleButton fx:id="allTypes" text="ALL" userData="ALL" selected="true" toggleGroup="$types" onAction="#filter" styleClass="manager-type"/>
+   <ToggleButton text="DOCUMENTS" userData="DOCUMENTS" toggleGroup="$types" onAction="#filter" styleClass="manager-type"/>
+   <ToggleButton text="IMAGES" userData="IMAGES" toggleGroup="$types" onAction="#filter" styleClass="manager-type"/>
+   <ToggleButton text="VIDEO" userData="VIDEO" toggleGroup="$types" onAction="#filter" styleClass="manager-type"/>
+   <ToggleButton text="AUDIO" userData="AUDIO" toggleGroup="$types" onAction="#filter" styleClass="manager-type"/>
+   <ToggleButton text="ARCHIVES" userData="ARCHIVES" toggleGroup="$types" onAction="#filter" styleClass="manager-type"/>
+   <ToggleButton text="OTHER" userData="OTHER" toggleGroup="$types" onAction="#filter" styleClass="manager-type"/>
+  </FlowPane>
+  <Label fx:id="resultLabel" styleClass="muted" wrapText="true"/>
+  <ListView fx:id="downloadEntries" VBox.vgrow="ALWAYS" styleClass="manager-list" accessibleText="Downloads">
+   <placeholder><VBox styleClass="manager-empty"><Label fx:id="emptyLabel" text="No downloads in this period." wrapText="true"/></VBox></placeholder>
+  </ListView>
+ </VBox></center>
+</BorderPane>

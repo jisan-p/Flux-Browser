@@ -40,7 +40,8 @@
     <Label text="Keychain entries belong to Flux and are scoped to the exact HTTPS origin and username. CLI providers require Bitwarden or 1Password installed and unlocked separately; Flux retrieves only the item ID you supply. Save/edit those external items in their own app." wrapText="true"/>
    </VBox></Tab>
    <Tab text="Downloads"><VBox spacing="14" style="-fx-padding:24;">
-    <Button fx:id="openPdfButton" text="Open PDF…" onAction="#openPdf"/>
+    <Button text="Open Downloads page" onAction="#showDownloads"/>
+    <Button fx:id="compatibilityOpenPdfButton" text="Open PDF…" onAction="#openPdf"/>
     <Label text="Choose the save location for each download. Files are never opened automatically." wrapText="true"/>
     <ListView fx:id="downloads" VBox.vgrow="ALWAYS"/>
     <HBox spacing="12"><Button text="Cancel selected" onAction="#cancelDownload"/><Button text="Reveal in Finder" onAction="#revealDownload"/><Button text="Open downloaded PDF" onAction="#downloadedPdf"/></HBox>

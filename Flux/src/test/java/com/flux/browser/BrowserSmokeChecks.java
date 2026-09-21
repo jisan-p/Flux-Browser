@@ -38,6 +38,8 @@ public final class BrowserSmokeChecks {
         if (url == null || !url.matches("jdbc:postgresql://[^/]+/flux_test(?:\\?.*)?")) {
             throw new IllegalArgumentException("Set FLUX_DB_URL to a disposable database named flux_test before running ui-check.");
         }
+        System.setProperty("flux.profileDir", java.nio.file.Files.createTempDirectory("flux-smoke-").toString());
+        System.setProperty("flux.session", "false");
         boolean expectStorage = !"false".equals(System.getenv("FLUX_EXPECT_STORAGE"));
         Thread.setDefaultUncaughtExceptionHandler((thread, error) -> { error.printStackTrace(); uncaught.set(error); });
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -151,6 +153,8 @@ public final class BrowserSmokeChecks {
                 await("dial removed", () -> dial("Edited " + dialTitle) == null);
             }
 
+            var firstTabPage = fx(BrowserSmokeChecks::web);
+            String firstTabAddress = fx(() -> text("addressBar").getText());
             shortcut(KeyCode.T);
             BrowserChecks.equal(fx(BrowserSmokeChecks::tabCount), 2);
             BrowserChecks.check(fx(() -> web() == null), "New blank tab does not allocate WebKit");
@@ -161,7 +165,7 @@ public final class BrowserSmokeChecks {
             BrowserChecks.equal(script("!!window.opener"), "true");
             script("window.close(); true"); loaded("Page One");
             shortcut(KeyCode.DIGIT1);
-            BrowserChecks.check(fx(() -> text("addressBar").getText().equals("flux://start") || web().location.get().endsWith("/two")), "tab switch keeps independent page state");
+            BrowserChecks.check(fx(() -> text("addressBar").getText().equals(firstTabAddress) && web() == firstTabPage), "tab switch keeps independent page state");
             shortcut(KeyCode.DIGIT2); loaded("Page One");
 
             fire("settingsButton");
