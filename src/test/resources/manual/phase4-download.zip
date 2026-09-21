@@ -1,3 +1,0 @@
-Flux Phase 4 download fixture.
-This deliberately small text payload uses a .zip filename so the conservative
-JavaFX WebView download detector can be reviewed without third-party servers.

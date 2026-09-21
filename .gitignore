@@ -9,7 +9,7 @@ target/
 *.war
 *.ear
 
-# VS Code and other IDEs
+# IDEs
 .vscode/
 .idea/
 *.iml
@@ -25,6 +25,9 @@ target/
 .DS_Store
 Thumbs.db
 
-# Ideas and scratch notes
+# JVM crash logs
+hs_err_pid*
+
+# Scratch notes
 CssomParser.md
 recent_updates.md
