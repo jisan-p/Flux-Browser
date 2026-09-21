@@ -40,10 +40,13 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
 #include "FluxServices.h"
 #include "FluxInspector.h"
 #include "FluxContextMenu.h"
+#include "FluxViewport.h"
+#include "FluxApplicationMenu.h"
 
 @interface FluxPage : NSObject <WKNavigationDelegate, WKUIDelegate, PDFViewDelegate>
 @property(nonatomic) long long identifier;
 @property(nonatomic, strong) FluxContextWebView *web;
+@property(nonatomic, strong) FluxViewport *viewport;
 @property(nonatomic, strong) PDFView *pdf;
 @property(nonatomic, copy) NSString *pdfPath;
 @property(nonatomic) BOOL shown;
@@ -80,12 +83,22 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
         configuration.upgradeKnownHostsToHTTPS = secureHosts;
         if (blockingRules) [configuration.userContentController addContentRuleList:blockingRules];
         _web = [[FluxContextWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration];
+        _viewport = [[FluxViewport alloc] initWithFrame:NSZeroRect];
+        _viewport.page = _web;
+        _viewport.hidden = YES;
+        _web.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+        [_viewport addSubview:_web];
         _web.fluxIdentifier = identifier;
         _web.navigationDelegate = self; _web.UIDelegate = self;
         _inspectionEnabled = enableInspection(_web); // Frontend still loads only on request.
         inspectorDelegate(fluxInspector(_web), self);
         __weak FluxPage *weakPage = self;
         _web.didInspect = ^{ [weakPage detachInspector]; };
+        // Covers first open, cached frontend reuse and docking from the inspector UI.
+        // Wait for WebKit to finish attaching before moving its frontend to a window.
+        _viewport.inspectorAttached = ^{
+            dispatch_async(dispatch_get_main_queue(), ^{ [weakPage detachInspector]; });
+        };
         _web.hidden = YES;
         _web.allowsBackForwardNavigationGestures = YES;
         for (NSString *key in @[@"URL", @"title", @"estimatedProgress", @"canGoBack", @"canGoForward"])
@@ -107,16 +120,14 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
     id inspector = fluxInspector(self.web);
     if (!inspectorFlag(inspector,@"isVisible")) return;
     inspectorCall(inspector,@"detach");
-    // WebKit's detach can expand the inspected view to its entire superview. Restore the
-    // rectangle supplied by JavaFX so browser chrome stays outside the native page.
-    if (!NSIsEmptyRect(self.viewportFrame)) self.web.frame = self.viewportFrame;
+    self.web.frame = self.viewport.bounds;
     NSWindow *window = inspectorFrontend(inspector).window;
     if (window && window != self.owner) [window makeKeyAndOrderFront:nil];
 }
 - (void)attach:(NSWindow *)window {
     self.owner = window; self.glass = window.contentView;
-    // The view is a sibling above Glass, inside the SAME window: no floating window, no pixel copy.
-    [window.contentView addSubview:self.web positioned:NSWindowAbove relativeTo:nil];
+    // Only this container owns window coordinates; WebKit lays out within the page.
+    [window.contentView addSubview:self.viewport positioned:NSWindowAbove relativeTo:nil];
     [self publish];
 }
 - (void)publish {
@@ -214,12 +225,14 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
 - (void)dispose {
     if (self.disposed) return;
     self.disposed = YES; [self.web clearContext]; self.web.didInspect = nil;
+    self.viewport.inspectorAttached = nil;
     inspectorDelegate(fluxInspector(self.web), nil);
     if (self.inspectionEnabled) inspectorCall(fluxInspector(self.web),@"close");
     for (NSString *key in @[@"URL", @"title", @"estimatedProgress", @"canGoBack", @"canGoForward"])
         [self.web removeObserver:self forKeyPath:key];
     self.web.navigationDelegate = nil; self.web.UIDelegate = nil;
     [self.web stopLoading]; [self.web removeFromSuperview]; self.web = nil; [self.pdf removeFromSuperview]; self.pdf.document = nil; self.pdf = nil;
+    [self.viewport removeFromSuperview]; self.viewport = nil;
 }
 @end
 
@@ -267,6 +280,24 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *machine, void *reserved) {
     return callback ? JNI_VERSION_1_8 : JNI_ERR;
 }
 #define JNI(name) Java_com_flux_browser_web_NativeWebPage_##name
+JNIEXPORT void JNICALL JNI(applicationMenuCommand)(JNIEnv *env, jclass cls, jlong token, jstring operation, jstring value) {
+    NSString *op = string(env, operation), *argument = string(env, value);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSString *result = @"ok";
+        if ([op isEqual:@"install"]) {
+            NSDictionary *labels = [NSJSONSerialization JSONObjectWithData:[argument dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
+            installApplicationEntries(labels);
+        } else if ([op isEqual:@"edit"]) result = editNativeResponder(argument) ? @"true" : @"false";
+        else if ([op isEqual:@"state"]) {
+            NSData *data = [NSJSONSerialization dataWithJSONObject:applicationMenuState(NSApp.mainMenu) options:0 error:nil];
+            result = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        } else if ([op isEqual:@"activate"]) {
+            NSMenuItem *item = applicationMenuItem(argument);
+            result = item && item.enabled && item.action && [NSApp sendAction:item.action to:item.target from:item] ? @"true" : @"false";
+        }
+        emit(0, @"service", result, token, 0);
+    });
+}
 JNIEXPORT void JNICALL JNI(create)(JNIEnv *env, jclass cls, jlong identifier, jlong handle) {
     dispatch_async(dispatch_get_main_queue(), ^{
         if (!pages) pages = [NSMutableDictionary new];
@@ -294,8 +325,9 @@ JNIEXPORT void JNICALL JNI(frame)(JNIEnv *env, jclass cls, jlong identifier, jdo
         CGFloat top = container.isFlipped ? y : container.bounds.size.height - y - h;
         p.shown = visible;
         p.viewportFrame = NSMakeRect(x, top, MAX(0, w), MAX(0, h));
-        p.web.frame = p.viewportFrame; p.web.hidden = !visible || p.pdf != nil;
-        p.pdf.frame = p.web.frame; p.pdf.hidden = !visible;
+        p.viewport.frame = p.viewportFrame; p.viewport.hidden = !visible;
+        p.web.frame = p.viewport.bounds; p.web.hidden = !visible || p.pdf != nil;
+        p.pdf.frame = p.viewport.bounds; p.pdf.hidden = !visible;
         if (visible && p.pdf && p.positionPdf) {
             p.positionPdf = NO; [p.pdf layoutDocumentView];
             PDFPage *first = [p.pdf.document pageAtIndex:0];
@@ -319,10 +351,11 @@ JNIEXPORT void JNICALL JNI(command)(JNIEnv *env, jclass cls, jlong identifier, j
                     if (p.disposed || version != p.documentVersion) return;
                     if (!doc) { emit(identifier,@"error",@"Could not open PDF",0,0); return; }
                     [p.pdf removeFromSuperview];
-                    p.pdf = [[PDFView alloc] initWithFrame:p.web.frame]; p.pdf.document = doc; p.pdf.delegate = p; p.pdf.autoScales = YES;
+                    p.pdf = [[PDFView alloc] initWithFrame:p.viewport.bounds]; p.pdf.document = doc; p.pdf.delegate = p; p.pdf.autoScales = YES;
+                    p.pdf.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
                     p.pdf.displayMode = kPDFDisplaySinglePageContinuous; p.pdfPath = argument; p.positionPdf = YES;
                     p.web.hidden = YES; p.pdf.hidden = !p.shown;
-                    [p.owner.contentView addSubview:p.pdf positioned:NSWindowAbove relativeTo:nil];
+                    [p.viewport addSubview:p.pdf positioned:NSWindowAbove relativeTo:nil];
                     [p.pdf layoutDocumentView]; [p.pdf goToFirstPage:nil];
                     if (p.shown) [p.owner makeFirstResponder:p.pdf];
                     emit(identifier,@"document",@"",1,0); [p publish]; emit(identifier,@"finish",@"",0,0);
@@ -368,7 +401,7 @@ JNIEXPORT void JNICALL JNI(command)(JNIEnv *env, jclass cls, jlong identifier, j
             if ([p.owner.firstResponder isKindOfClass:NSView.class] && ([(NSView *)p.owner.firstResponder isDescendantOf:p.web] || (p.pdf && [(NSView *)p.owner.firstResponder isDescendantOf:p.pdf])))
                 [p.owner makeFirstResponder:p.glass];
         } else if ([op isEqual:@"hide"]) {
-            [p.web clearContext]; p.shown = NO; p.web.hidden = YES; p.pdf.hidden = YES; p.focusWhenShown = NO;
+            [p.web clearContext]; p.shown = NO; p.viewport.hidden = YES; p.web.hidden = YES; p.pdf.hidden = YES; p.focusWhenShown = NO;
             if ([p.owner.firstResponder isKindOfClass:NSView.class] && ([(NSView *)p.owner.firstResponder isDescendantOf:p.web] || (p.pdf && [(NSView *)p.owner.firstResponder isDescendantOf:p.pdf])))
                 [p.owner makeFirstResponder:p.glass];
         }
@@ -432,12 +465,17 @@ JNIEXPORT void JNICALL JNI(contextMenuTest)(JNIEnv *env, jclass cls, jlong ident
         } else if ([op isEqual:@"inspectorState"]) {
             WKWebView *frontend = inspectorFrontend(fluxInspector(p.web));
             NSWindow *window = frontend.window;
-            NSDictionary *state = @{@"detached":@(window && window != p.owner && window.visible),
-                @"window":@(window.windowNumber), @"viewport":@(NSEqualRects(p.web.frame,p.viewportFrame)), @"pageVisible":@(!p.web.hidden)};
+            NSView *chromeHit = [p.owner.contentView hitTest:NSMakePoint(20, p.owner.contentView.bounds.size.height-25)];
+            NSDictionary *state = @{@"detached":(window && window != p.owner && window.visible ? @YES : @NO),
+                @"actualFrame":NSStringFromRect([p.web convertRect:p.web.bounds toView:p.owner.contentView]), @"expectedFrame":NSStringFromRect(p.viewportFrame),
+                @"window":@(window.windowNumber), @"viewport":(NSEqualRects(p.viewport.frame,p.viewportFrame) && NSEqualRects(p.web.frame,p.viewport.bounds) ? @YES : @NO), @"pageVisible":(!p.web.hidden && !p.viewport.hidden ? @YES : @NO),
+                @"chromeClear":([chromeHit isDescendantOf:p.viewport] ? @NO : @YES)};
             NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:nil];
             emit(identifier,@"script",[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding],token,0);
         } else if ([op isEqual:@"dockInspector"]) {
-            inspectorCall(fluxInspector(p.web),@"attach"); emit(identifier,@"script",@"attached",token,0);
+            inspectorCall(fluxInspector(p.web),@"attach");
+            if ([argument isEqual:@"close"]) inspectorCall(fluxInspector(p.web),@"close");
+            emit(identifier,@"script",@"attached",token,0);
         } else if ([op isEqual:@"closeInspectorWindow"]) {
             NSWindow *window = inspectorFrontend(fluxInspector(p.web)).window;
             if (window && window != p.owner) [window performClose:nil];
@@ -572,7 +610,7 @@ JNIEXPORT void JNICALL JNI(inspect)(JNIEnv *env, jclass cls, jlong identifier, j
             }
             if ([op isEqual:@"close"] || ([op isEqual:@"toggle"] && inspectorFlag(inspector,@"isVisible"))) {
                 inspectorCall(inspector,@"close");
-                if (!NSIsEmptyRect(p.viewportFrame)) p.web.frame = p.viewportFrame;
+                p.web.frame = p.viewport.bounds;
                 emit(identifier,@"script",@"Developer Tools closed",token,0); return;
             }
             BOOL local = enableInspection(p.web); p.inspectionEnabled = YES;

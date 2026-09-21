@@ -66,12 +66,12 @@ The content StackPane contains `tabHost`, the included `library`, and the includ
 | `#settings` | Shows the included Settings panel |
 | `#minimize`, `#maximize`, `#quit` | Apply the corresponding Stage action |
 | `#beginDrag`, `#dragWindow`, `#titleClicked` | Drag and double-click the empty title region |
-| `#beginResize`, `#resizeWindow` | Resize from the bottom-right grip while respecting minimum dimensions |
+| `#beginResize`, `#resizeWindow` | Delegate bottom-right grip gestures to `WindowResizeSupport`, which also handles all outer edges/corners and constrains resizing to usable screen bounds |
 | `databaseStatus`, `statusText`, `tabCount` | Display connection state, short feedback, and actual open-tab count |
 
 `tabChanged(...)` schedules an `AnimationTimer` that combines bursts of page events into one `refreshChrome()` call per JavaFX pulse, then stops until another event arrives. Explicit shell actions can also refresh immediately. `refreshChrome()` copies the selected tab's navigation availability, title, URL, progress, and state into these controls. It preserves a focused address field while the user is typing. The bookmark lookup uses a request counter so a late database result from another page cannot paint the wrong star. `perform(...)` applies JDBC completions using `Platform.runLater`; it never calls `Future.get()` on JavaFX. `updateActiveContent()` pauses Home activity while a shell panel covers it or the window is minimized.
 
-**Safe live edit:** select the navigation HBox and change its spacing or padding, or adjust the title-strip height. Keep `tabHost` and the included panels intact. The window's initial dimensions/minimum size are set in `FluxBrowser.java`, so editing a root preview size does not change those launch settings.
+**Safe live edit:** select the navigation HBox and change its spacing or padding, or adjust the title-strip height. Keep `tabHost` and the included panels intact. `FluxBrowser.java` uses `WindowGeometry` to center and size the initial window within the display's usable bounds, so editing a root preview size does not change those launch settings. Keep the outer four-point gutter available for edge resizing and the shell/content containers' minimum width/height at zero so their children can reflow on small screens. Settings categories use a separate ScrollPane to remain reachable in short windows.
 
 ## 5. Sidebar.fxml → SidebarController.java
 
@@ -114,7 +114,7 @@ This StackPane initially contains the included `speedDial` and `errorPane`. `pag
 
 ### NativeWebContent.fxml → NativeWebContentController.java
 
-The `viewport` StackPane has ID `nativeWebView`. It defines the webpage rectangle in the JavaFX layout; Scene Builder previews an empty rectangle, not a website. `NativeWebPage` tracks its logical scene bounds and asynchronously positions WKWebView as a native subview in the same macOS window. Hiding a tab, Home, or a covering shell panel also hides the native view. Keep the viewport untransformed and rectangular: native content does not participate in JavaFX effects, clipping, or scene snapshots. UI verification saves native page snapshots separately. Page alerts/prompts and file pickers use AppKit sheets; the shell's library editors remain FXML dialogs.
+The `viewport` StackPane has ID `nativeWebView`. It defines the webpage rectangle in the JavaFX layout; Scene Builder previews an empty rectangle, not a website. `NativeWebPage` tracks its logical scene bounds and asynchronously positions a native `FluxViewport` container in the same macOS window. WKWebView and PDFKit lay out inside that container, so opening or closing Web Inspector cannot expand them across the browser controls. Hiding a tab, Home, or a covering shell panel also hides the container. Keep the viewport untransformed and rectangular: native content does not participate in JavaFX effects, clipping, or scene snapshots. UI verification saves native page snapshots separately. Page alerts/prompts and file pickers use AppKit sheets; the shell's library editors remain FXML dialogs.
 
 ## 8. WebContent.fxml → WebContentController.java
 

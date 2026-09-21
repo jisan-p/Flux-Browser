@@ -16,6 +16,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.input.*;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import com.flux.browser.ui.WindowGeometry;
 
 /** A disposable local page: no database, external sites, or user session required. */
 public final class DeveloperToolsChecks {
@@ -23,6 +25,7 @@ public final class DeveloperToolsChecks {
     private static BrowserController browser;
     public static void main(String[] args)throws Exception {
         System.setProperty("flux.session","false"); System.setProperty("flux.testInput","true");
+        System.setProperty("flux.profileDir",Files.createTempDirectory("flux-inspector-check-").toString());
         var server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
         server.createContext("/",e->{
             byte[] body="<!doctype html><title>Flux Inspector Fixture</title><style>h1{color:blue}</style><h1 id='fixture'>Inspect this element</h1><script>window.fixtureValue=42;console.log('Flux inspector fixture');</script>".getBytes(StandardCharsets.UTF_8);
@@ -30,7 +33,7 @@ public final class DeveloperToolsChecks {
         });server.start();
         Platform.startup(()->Platform.setImplicitExit(false));
         try {
-            fx(()->{var view=Views.<BrowserController>load("BrowserWindow");browser=view.controller();stage=new Stage();stage.setScene(new Scene(view.root(),1280,820));browser.configure(stage,new DatabaseManager("jdbc:postgresql://127.0.0.1:1/flux_test","flux",""));stage.show();browser.developerTools();return null;});
+            fx(()->{var view=Views.<BrowserController>load("BrowserWindow");browser=view.controller();stage=new Stage();stage.initStyle(StageStyle.UNDECORATED);stage.setScene(new Scene(view.root(),1100,700));browser.configure(stage,new DatabaseManager("jdbc:postgresql://127.0.0.1:1/flux_test","flux",""));stage.show();browser.developerTools();return null;});
             BrowserChecks.check(fx(()->browser.currentPage()==null),"Home does not allocate an inspector");
             fx(()->{browser.navigateTo("http://127.0.0.1:"+server.getAddress().getPort()+"/");return null;});
             await(()->fx(()->browser.currentPage()!=null && browser.currentPage().state.get()==Worker.State.SUCCEEDED),"fixture load");
@@ -43,7 +46,17 @@ public final class DeveloperToolsChecks {
                 try{return fx(()->page.inspectorFrontendForTesting("typeof WI + ':' + document.readyState")).get().equals("object:complete");}
                 catch(ExecutionException e){return false;}
             },"Web Inspector frontend loads");
+            System.out.println("Inspector geometry: " + inspectorState(page));
             awaitDetached(page);
+            fx(()->{stage.setWidth(940);stage.setHeight(650);return null;});
+            await(()->fx(()->Math.abs(stage.getScene().getWidth()-940)<2),"small window resized with inspector open");
+            awaitViewport(page);
+            fx(()->{((Button)stage.getScene().lookup("#maximizeButton")).fire();return null;});
+            await(()->fx(()->stage.isMaximized() && Math.abs(stage.getWidth()-WindowGeometry.screen(stage).getWidth())<2),"maximize with inspector open");
+            awaitViewport(page);
+            fx(()->{((Button)stage.getScene().lookup("#maximizeButton")).fire();return null;});
+            await(()->fx(()->!stage.isMaximized() && Math.abs(stage.getWidth()-940)<2),"restore with inspector open");
+            awaitViewport(page);
             long window = inspectorState(page).get("window").getAsLong();
             fx(()->{browser.features();((Button)stage.getScene().lookup("#developerToolsButton")).fire();return null;});
             awaitDetached(page);
@@ -59,6 +72,7 @@ public final class DeveloperToolsChecks {
             BrowserChecks.check(evaluated.contains("43"),"console evaluates in inspected page: "+evaluated);
             fx(()->{browser.developerTools();return null;});
             await(()->fx(()->page.developerTools("status")).get().equals("closed"),"toggle closes inspector");
+            awaitViewport(page);
             fx(()->{page.postShortcutForTesting("developerTools");return null;});
             await(()->fx(()->page.developerTools("status")).get().equals("visible"),"native Cmd+Option+I");
             fx(()->page.developerTools("close")).get();
@@ -66,9 +80,11 @@ public final class DeveloperToolsChecks {
             await(()->fx(()->page.developerTools("status")).get().equals("visible"),"FXML F12 shortcut");
             awaitDetached(page);
             // Simulate WebKit retaining a docked layout, then enter through its own Inspect Element menu.
-            fx(()->page.contextMenuForTesting("dockInspector", "")).get();
-            await(()->!inspectorState(page).get("detached").getAsBoolean(),"test inspector docked");
-            fx(()->page.developerTools("close")).get();
+            // Close during the attach operation, before Flux's queued detach. This recreates
+            // WebKit's destructive close-while-docked layout without relying on timing.
+            fx(()->page.contextMenuForTesting("dockInspector", "close")).get();
+            await(()->fx(()->page.developerTools("status")).get().equals("closed"),"close while docked");
+            awaitViewport(page);
             Thread.sleep(350);
             fx(()->page.contextMenuForTesting("show", "40,30")).get();
             await(()->fx(()->page.contextMenuForTesting("state", "")).get().contains("WKMenuItemIdentifierInspectElement"),"native Inspect Element menu");
@@ -77,6 +93,7 @@ public final class DeveloperToolsChecks {
             await(()->{try{return fx(()->page.inspectorFrontendForTesting("document.body.innerText")).get().contains("fixture");}catch(ExecutionException e){return false;}},"Inspect Element shows fixture DOM");
             fx(()->page.contextMenuForTesting("closeInspectorWindow", "")).get();
             await(()->fx(()->page.developerTools("status")).get().equals("closed"),"native window close button");
+            awaitViewport(page);
             BrowserChecks.equal(fx(()->page.evaluate("document.title")).get(),"Flux Inspector Fixture");
             fx(()->{browser.showDeveloperTools();return null;}); awaitDetached(page);
             fx(()->{browser.newTab();browser.navigateTo("http://127.0.0.1:"+server.getAddress().getPort()+"/second");return null;});
@@ -93,7 +110,17 @@ public final class DeveloperToolsChecks {
         return com.google.gson.JsonParser.parseString(fx(()->page.contextMenuForTesting("inspectorState", "")).get()).getAsJsonObject();
     }
     private static void awaitDetached(NativeWebPage page) throws Exception {
-        await(()->{var state=inspectorState(page);return state.get("detached").getAsBoolean() && state.get("viewport").getAsBoolean() && state.get("pageVisible").getAsBoolean();},"separate inspector window with original webpage viewport");
+        await(()->{var state=inspectorState(page);return state.get("detached").getAsBoolean() && state.get("viewport").getAsBoolean() && state.get("pageVisible").getAsBoolean() && state.get("chromeClear").getAsBoolean();},"separate inspector window with original webpage viewport");
+    }
+    private static void awaitViewport(NativeWebPage page) throws Exception {
+        await(()->{
+            var state=inspectorState(page);
+            double width=fx(()->page.view().getLayoutBounds().getWidth());
+            double height=fx(()->page.view().getLayoutBounds().getHeight());
+            String[] size=fx(()->page.evaluate("innerWidth+','+innerHeight")).get().split(",");
+            return state.get("viewport").getAsBoolean() && state.get("chromeClear").getAsBoolean()
+                && Math.abs(Double.parseDouble(size[0])-width)<2 && Math.abs(Double.parseDouble(size[1])-height)<2;
+        },"native page matches FXML viewport and leaves window controls exposed");
     }
     private static void checkCompatibility() throws Exception {
         var page = fx(()->browser.currentPage());

@@ -3,6 +3,8 @@ package com.flux.browser.controller;
 import com.flux.browser.db.*;
 import com.flux.browser.feature.*;
 import com.flux.browser.web.NativeWebPage;
+import com.flux.browser.ui.WindowGeometry;
+import com.flux.browser.ui.WindowResizeSupport;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.IdentityHashMap;
@@ -36,6 +38,7 @@ import javafx.util.Duration;
 public final class BrowserController {
     private record Tab(WebTabController page, Parent content, TabHeaderController header, Parent chip) {}
     @FXML private StackPane root;
+    @FXML private ApplicationMenuController applicationMenuController;
     @FXML private Parent sidebar, easySetup, historyPanel;
     @FXML private HistoryPanelController historyPanelController;
     @FXML private EasySetupController easySetupController;
@@ -87,10 +90,13 @@ public final class BrowserController {
     private boolean closed, connecting, bookmarked;
     private int bookmarkRequest;
     private String checkedBookmarkUrl;
-    private double dragX, dragY, resizeX, resizeY, resizeWidth, resizeHeight;
+    private double dragX, dragY;
+    private WindowResizeSupport windowResize;
 
     public void configure(Stage stage, DatabaseManager database) {
         this.stage = stage; this.database = database;
+        windowResize = new WindowResizeSupport(stage, root);
+        applicationMenuController.configure(this);
         historyDAO = new HistoryDAO(database); bookmarkDAO = new BookmarkDAO(database); speedDialDAO = new SpeedDialDAO(database);
         sidebarController.configure(this);
         libraryController.configure(this, bookmarkDAO, historyDAO);
@@ -318,6 +324,7 @@ public final class BrowserController {
         if (!panelsVisible()) sidebarController.select(historyPanel.isVisible() ? "history" : page.isHome() ? "home" : "");
         updateBookmark(false);
         if (toast.getStatus() != Animation.Status.RUNNING) updateStatus();
+        applicationMenuController.refresh();
     }
 
     private String bookmarkUrl() {
@@ -527,6 +534,21 @@ public final class BrowserController {
     }
     public void focusAddress() { addressBar.requestFocus(); addressBar.selectAll(); }
 
+    public record MenuState(boolean web, boolean back, boolean forward, boolean loading, boolean bookmarkEnabled,
+                            boolean bookmarked, boolean otherTabs, boolean rightTabs, int visibleTabs, int totalTabs, double zoom) { }
+    public MenuState menuState() {
+        var page = currentPage();
+        return new MenuState(!panelsVisible() && page != null && !(page instanceof NativeWebPage n && n.pdf.get()),
+            !backButton.isDisable(), !forwardButton.isDisable(), active != null && active.page().loadingProperty().get(),
+            !bookmarkButton.isDisable(), bookmarked, active != null && hasOtherTabs(active.page(), false),
+            active != null && hasOtherTabs(active.page(), true), visibleTabs().size(), tabs.size(), active == null ? 1 : active.page().zoom());
+    }
+    public void closeCurrentOtherTabs(boolean rightOnly) { if (active != null) closeOtherTabs(active.page(), rightOnly); }
+    public void saveCurrentPage() {
+        if (menuState().web() && currentPage() instanceof NativeWebPage page) page.action("download", currentUrl());
+    }
+    public void about() { settings(); settingsController.selectCategory("About"); }
+
     private void keyPressed(KeyEvent event) {
         boolean handled = true;
         if (event.getCode() == KeyCode.F12 && !event.isAltDown() && !event.isShortcutDown()) {
@@ -565,20 +587,18 @@ public final class BrowserController {
     }
 
     @FXML private void minimize() { stage.setIconified(true); }
-    @FXML private void maximize() { stage.setMaximized(!stage.isMaximized()); }
+    @FXML private void maximize() {
+        WindowGeometry.minimum(stage, WindowGeometry.screen(stage));
+        stage.setMaximized(!stage.isMaximized());
+    }
     @FXML private void quit() { close(); stage.close(); Platform.exit(); }
     @FXML private void beginDrag(MouseEvent event) { dragX = event.getScreenX() - stage.getX(); dragY = event.getScreenY() - stage.getY(); }
     @FXML private void dragWindow(MouseEvent event) {
         if (!stage.isMaximized() && event.isPrimaryButtonDown()) { stage.setX(event.getScreenX() - dragX); stage.setY(event.getScreenY() - dragY); }
     }
     @FXML private void titleClicked(MouseEvent event) { if (event.getClickCount() == 2 && event.getButton() == MouseButton.PRIMARY) maximize(); }
-    @FXML private void beginResize(MouseEvent event) { resizeX = event.getScreenX(); resizeY = event.getScreenY(); resizeWidth = stage.getWidth(); resizeHeight = stage.getHeight(); }
-    @FXML private void resizeWindow(MouseEvent event) {
-        if (!stage.isMaximized() && event.isPrimaryButtonDown()) {
-            stage.setWidth(Math.max(stage.getMinWidth(), resizeWidth + event.getScreenX() - resizeX));
-            stage.setHeight(Math.max(stage.getMinHeight(), resizeHeight + event.getScreenY() - resizeY));
-        }
-    }
+    @FXML private void beginResize(MouseEvent event) { windowResize.beginCorner(event); }
+    @FXML private void resizeWindow(MouseEvent event) { windowResize.drag(event); }
 
     public FeatureStore.State preferences() { return preferences; }
     public Downloads downloads() { return downloads; }
@@ -587,7 +607,7 @@ public final class BrowserController {
     public String currentUrl() { return active == null ? "" : active.page().locationProperty().get(); }
     public BrowserPage currentPage() { return active == null || active.page().isHome() ? null : active.page().existingPage(); }
     public boolean focusMode() { return focusMode; }
-    public void setFocusMode(boolean value) { focusMode = value; newTabButton.setDisable(value); refreshWorkspaceHeaders(); }
+    public void setFocusMode(boolean value) { focusMode = value; newTabButton.setDisable(value); refreshWorkspaceHeaders(); applicationMenuController.refresh(); }
     private List<Tab> visibleTabs() { return tabs.stream().filter(t -> preferences.workspace.equals(workspaces.get(t))).toList(); }
     private void refreshWorkspaceHeaders() { for (Tab t : tabs) visible(t.chip(), preferences.workspace.equals(workspaces.get(t)) && (!focusMode || t == active)); }
     public void createWorkspace(String name) {
@@ -699,6 +719,7 @@ public final class BrowserController {
 
     public void close() {
         if (closed) return;
+        applicationMenuController.dispose();
         persistSession(); sessionDelay.stop(); appearanceRefresh.stop(); easySetupController.close(); wallpaperCanvas.dispose(); chromeContour.dispose(); soundscape.close(); if(systemTheme!=null)systemTheme.close(); featuresController.close(); store.close();
         if (NativeWebPage.enabled()) NativeWebPage.shutdownServices();
         closed = true; bookmarkRequest++; toast.stop(); chromeRefresh.stop(); libraryController.dispose(); downloadsPageController.dispose(); historyPanelController.dispose();

@@ -7,7 +7,7 @@ Open **Browser tools** using the four-square icon beside the address bar to acce
 | Feature | How it works / defaults |
 | --- | --- |
 | Appearance | Persistent color themes, Light/Dark/Auto, procedural or local wallpapers, opacity/blur/vignette, fonts, Speed Dial layout/effects, sidebar visibility, optional audio, and named/importable presets through Easy Setup. |
-| Developer Tools | Tools → Developer Tools, F12 or Option+Cmd+I toggles Apple’s Web Inspector for the current web tab. Tools → Console or Option+Cmd+C opens its Console. Right-click a web page for Inspect Element. Inspector windows belong to their source tabs and close with them. |
+| Developer Tools | Tools → Developer Tools opens Apple’s Web Inspector for the current web tab in a separate window; F12 or Option+Cmd+I toggles it. Tools → Console or Option+Cmd+C opens its Console. Right-click a web page for Inspect Element. Browser controls remain visible during Inspector open/close and window resizing. Inspector windows belong to their source tabs and close with them. |
 | Session restore | Enabled by default. Saves tab URL/title/zoom, workspace membership and selection. Only the selected restored tab loads; background tabs load when selected. Forms, navigation stacks and scroll positions are not saved. |
 | Workspaces | Use the button directly below the window controls in the left rail. Create, switch, move the current tab or delete a workspace. Deleting moves its tabs to Default. At most 50 workspaces and 200 tabs. |
 | Focus mode | Keeps the selected tab visible and prevents opening, closing or switching tabs/workspaces until disabled. Existing background tabs remain open. |

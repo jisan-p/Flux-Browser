@@ -2,6 +2,25 @@
 
 Originally verified on September 12, 2026; the performance changes below were checked on September 13–14 on this Mac. Hardware inspection confirmed Apple M3, 8 logical CPUs, 8 GiB RAM, and native arm64 JDKs. PostgreSQL checks used an isolated PostgreSQL 18.3 cluster and its disposable `flux_test` database. The supplied Min checkout was not modified.
 
+## Small windows and Inspector containment (September 21)
+
+Reproduced the Inspector replacing the page rectangle with a frame spanning the browser window. WebKit's [attachment implementation](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/Inspector/mac/WebInspectorUIProxyMac.mm) lays out against the inspected view's parent. `FluxViewport` now supplies a parent bounded to the FXML page area; WKWebView and PDFKit share that container. Inspector attachment schedules detachment after WebKit completes its layout, including when it reuses an already loaded frontend.
+
+- `DeveloperToolsChecks` passed with a real native Inspector: separate window, repeated open, right-click Inspect Element, Console evaluation, resize/maximize/restore while open, close while docked, native window close/reopen, source-tab ownership and disposal. Native hit testing confirms the close-control area stays outside the page, and JavaScript viewport dimensions match the FXML rectangle.
+- `WindowUiChecks` passed with the undecorated application shell at 1280 × 740, 1024 × 640, 1024 × 555 and 920 × 620 logical points. It exercises Home, Settings, Downloads, History, Easy Setup, all eight resize directions, screen bounds and maximize/restore. The Settings category list scrolls on short windows. Sidebar/button widths remain 46/32 points. Captures: `target/screenshots/window-*.png`.
+- `WindowGeometryChecks`, included in `mvn verify`, covers startup and resize bounds on small/scaled displays and negative monitor coordinates. Minimum dimensions are capped by usable screen size; resizing stays outside the menu bar and Dock.
+- `FeatureUiChecks` passed for native PDF rendering, PDF/web switching, downloads and context menus with temporary fixtures. `mvn -q verify` passed, including the native build.
+
+These checks ran on the development Mac with compact window sizes and simulated screen rectangles; the friend's physical 13-inch Mac and its macOS version have not been tested. No personal database or browser profile was used.
+
+Run from `Flux`:
+
+```sh
+mvn -q verify
+mvn -q -Pmodule-ui-check -Dflux.mainClass=com.flux.browser/com.flux.browser.WindowUiChecks test-compile javafx:run
+mvn -q -Pmodule-ui-check -Dflux.mainClass=com.flux.browser/com.flux.browser.DeveloperToolsChecks test-compile javafx:run
+```
+
 ## GX-style appearance (September 17)
 
 The installed Opera GX Speed Dial and Easy Setup were inspected using macOS accessibility and window captures after permission was granted. Flux screenshots were then inspected at normal and compact sizes. The supported customization controls, defaults, and explicit differences from Opera GX are listed in [CUSTOMIZATION.md](CUSTOMIZATION.md).

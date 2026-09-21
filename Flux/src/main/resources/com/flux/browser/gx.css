@@ -139,6 +139,7 @@
 .settings-title { -fx-font-size: 27; -fx-font-weight: normal; -fx-padding: 0 12; }
 .settings-header .button { -fx-font-size: 10; -fx-text-fill: -gx-muted; }
 .settings-navigation { -fx-padding: 10 12 24 18; }
+.settings-navigation-scroll, .settings-navigation-scroll > .viewport { -fx-background-color: transparent; -fx-padding: 0; -fx-background-insets: 0; }
 .settings-category { -fx-background-color: transparent; -fx-text-fill: -gx-muted; -fx-alignment: CENTER_LEFT; -fx-padding: 12 14; -fx-background-radius: 4; -fx-font-size: 12; }
 .settings-category:hover { -fx-background-color: -gx-card; }
 .settings-category:selected { -fx-background-color: -gx-card; -fx-text-fill: -flux-accent; -fx-border-color: -flux-accent; -fx-border-width: 0 0 0 2; }

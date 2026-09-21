@@ -8,7 +8,7 @@ Open **Easy Setup** using the sliders icon at the right of the address bar, the 
 
 | Group | Implemented behavior |
 | --- | --- |
-| Browser chrome | 46 px sidebar, vertical Mac window controls, compact neutral tabs, a new-tab button beside the tabs, a continuous charcoal address bar, a shared Reload/Stop position, and a blank Home address field. Window dragging and resizing remain available. |
+| Browser chrome | 46 px sidebar, vertical Mac window controls, compact neutral tabs, a new-tab button beside the tabs, a continuous charcoal address bar, a shared Reload/Stop position, and a blank Home address field. Resize from any outer edge/corner or the bottom-right grip; sizes respect usable display bounds. Maximize/restore keeps the page within the shell. Settings categories scroll on short windows. |
 | Themes | GX Classic, Ultraviolet, Sub Zero, Frost, Rose Quartz and Mint color presets; custom highlight and background colors. |
 | Light / Dark / Auto | Light and Dark apply immediately. Auto follows the public JavaFX system color-scheme preference where available, including the current JavaFX 26 Mac runtime. JavaFX 21 falls back to Dark for Auto. |
 | Wallpapers | Original Waves, Aurora and Grid artwork, wallpaper on/off, brightness, blur and vignette. Local PNG/JPEG/GIF images can be selected; animated wallpaper playback is not implemented. |

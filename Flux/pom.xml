@@ -112,6 +112,9 @@
             <id>mac-webkit</id>
             <activation><os><family>mac</family></os></activation>
             <build><plugins><plugin>
+                <groupId>org.openjfx</groupId><artifactId>javafx-maven-plugin</artifactId>
+                <configuration><options combine.children="append"><option>-Xdock:name=Flux</option></options></configuration>
+            </plugin><plugin>
                 <groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId>
                 <executions><execution>
                     <id>build-native-webkit</id><phase>generate-resources</phase><goals><goal>exec</goal></goals>

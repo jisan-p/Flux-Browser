@@ -23,6 +23,7 @@ public final class NativeWebPage extends BrowserPage {
     private static boolean libraryLoaded;
     private static final Map<Long, CompletableFuture<String>> SERVICES = new ConcurrentHashMap<>();
     private static volatile java.util.function.Consumer<String> downloadListener;
+    private static volatile java.util.function.Consumer<String> applicationMenuListener;
     private static String lastRules;
     private static boolean lastHttps, lastPhishing;
     private static CompletableFuture<String> lastPrivacy;
@@ -40,6 +41,26 @@ public final class NativeWebPage extends BrowserPage {
         result.orTimeout(90,TimeUnit.SECONDS).whenComplete((v,e) -> SERVICES.remove(token)); return result;
     }
     public static void downloadAction(long id, String action) { if (libraryLoaded) serviceAction(id,action); }
+    public static void installApplicationMenu(String name, String about, String settings, String quit, java.util.function.Consumer<String> listener) {
+        applicationMenuListener = listener;
+        String labels = new com.google.gson.Gson().toJson(Map.of("name", name, "about", about, "settings", settings, "quit", quit));
+        menuCommand("install", labels);
+    }
+    public static void clearApplicationMenu() { applicationMenuListener = null; }
+    public static CompletableFuture<Boolean> editFocused(String action) {
+        if (!Set.of("undo", "redo", "cut", "copy", "paste", "selectAll").contains(action))
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Unknown editing action"));
+        return menuCommand("edit", action).thenApply(Boolean::parseBoolean);
+    }
+    public static CompletableFuture<String> applicationMenuForTesting(String operation, String path) {
+        if (!Boolean.getBoolean("flux.testInput") || !Set.of("state", "activate").contains(operation)) throw new IllegalStateException("Test input disabled");
+        return menuCommand(operation, path);
+    }
+    private static CompletableFuture<String> menuCommand(String operation, String value) {
+        loadLibrary(); long token = IDS.incrementAndGet(); var future = new CompletableFuture<String>(); SERVICES.put(token, future);
+        applicationMenuCommand(token, operation, value);
+        return future.orTimeout(10, TimeUnit.SECONDS).whenComplete((v, e) -> SERVICES.remove(token));
+    }
     public static void shutdownServices() {
         downloadListener = null; lastRules = null; lastPrivacy = null;
         SERVICES.values().forEach(f -> f.completeExceptionally(new CancellationException("Browser closed"))); SERVICES.clear();
@@ -190,6 +211,9 @@ public final class NativeWebPage extends BrowserPage {
     }
     // Called from AppKit via JNI. Keep this entry point nonblocking, even for popups and JS evaluation.
     private static void event(long id, String kind, String value, long token, double number) {
+        if (kind.equals("applicationMenu")) {
+            Platform.runLater(() -> { var listener = applicationMenuListener; if (listener != null) listener.accept(value); }); return;
+        }
         if (kind.equals("download")) { if (downloadListener != null) Platform.runLater(() -> { var listener = downloadListener; if(listener != null) listener.accept(value); }); return; }
         if (kind.equals("service") || kind.equals("serviceError")) {
             var result = SERVICES.remove(token);
@@ -233,6 +257,7 @@ public final class NativeWebPage extends BrowserPage {
         return result;
     }
     private static native void contextMenuTest(long id, long token, String operation, String value);
+    private static native void applicationMenuCommand(long token, String operation, String value);
     /** Desktop test hook: posts inside this application's AppKit event queue, never to other apps. */
     public void postShortcutForTesting(String key) {
         if (!Boolean.getBoolean("flux.testInput")) throw new IllegalStateException("Test input is disabled");

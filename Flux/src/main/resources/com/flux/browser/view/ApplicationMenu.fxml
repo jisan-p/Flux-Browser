@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<MenuBar fx:id="root" useSystemMenuBar="true" managed="false" focusTraversable="false"
+ xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.flux.browser.controller.ApplicationMenuController">
+ <fx:define>
+  <!-- AppKit owns the first application menu; these definitions supply Flux's entries. -->
+  <Menu fx:id="application" text="Flux"><items>
+   <MenuItem fx:id="aboutItem" id="about" text="About Flux" onAction="#about"/>
+   <MenuItem fx:id="settingsItem" id="settings" text="Settings…" accelerator="Shortcut+," onAction="#settings"/>
+   <MenuItem fx:id="quitItem" id="quit" text="Quit Flux" accelerator="Shortcut+Q" onAction="#quit"/>
+  </items></Menu>
+ </fx:define>
+ <menus>
+  <Menu text="File" onShowing="#refresh"><items>
+   <MenuItem fx:id="newTabItem" text="New Tab" accelerator="Shortcut+T" onAction="#newTab"/>
+   <MenuItem text="Open Location…" accelerator="Shortcut+L" onAction="#location"/>
+   <MenuItem fx:id="openPdfItem" text="Open PDF…" accelerator="Shortcut+O" onAction="#openPdf"/>
+   <MenuItem fx:id="saveItem" text="Save Page As…" accelerator="Shortcut+S" onAction="#savePage"/>
+   <SeparatorMenuItem/><MenuItem text="Downloads" accelerator="Shortcut+Shift+J" onAction="#downloads"/>
+   <SeparatorMenuItem/><MenuItem fx:id="closeTabItem" text="Close Tab" accelerator="Shortcut+W" onAction="#closeTab"/>
+   <MenuItem text="Close Window" accelerator="Shortcut+Shift+W" onAction="#quit"/>
+  </items></Menu>
+  <Menu text="Edit"><items>
+   <MenuItem text="Undo" userData="undo" accelerator="Shortcut+Z" onAction="#edit"/>
+   <MenuItem text="Redo" userData="redo" accelerator="Shortcut+Shift+Z" onAction="#edit"/>
+   <SeparatorMenuItem/>
+   <MenuItem text="Cut" userData="cut" accelerator="Shortcut+X" onAction="#edit"/>
+   <MenuItem text="Copy" userData="copy" accelerator="Shortcut+C" onAction="#edit"/>
+   <MenuItem text="Paste" userData="paste" accelerator="Shortcut+V" onAction="#edit"/>
+   <MenuItem text="Select All" userData="selectAll" accelerator="Shortcut+A" onAction="#edit"/>
+  </items></Menu>
+  <Menu text="View" onShowing="#refresh"><items>
+   <MenuItem text="Speed Dial" onAction="#home"/>
+   <MenuItem text="Reload" accelerator="Shortcut+R" onAction="#reload"/>
+   <MenuItem fx:id="stopItem" text="Stop Loading" onAction="#stop"/>
+   <SeparatorMenuItem/>
+   <MenuItem fx:id="zoomInItem" text="Zoom In" accelerator="Shortcut+Plus" onAction="#zoomIn"/>
+   <MenuItem fx:id="zoomOutItem" text="Zoom Out" accelerator="Shortcut+Minus" onAction="#zoomOut"/>
+   <MenuItem fx:id="zoomResetItem" text="Actual Size" accelerator="Shortcut+0" onAction="#zoomReset"/>
+   <SeparatorMenuItem/><MenuItem text="Easy Setup" onAction="#easySetup"/>
+   <CheckMenuItem fx:id="fullScreenItem" text="Enter Full Screen" accelerator="Shortcut+Ctrl+F" onAction="#fullScreen"/>
+   <SeparatorMenuItem/><MenuItem text="Browser Tools" onAction="#tools"/>
+   <Menu text="Developer"><items>
+    <MenuItem fx:id="inspectItem" text="Show Web Inspector" accelerator="Shortcut+Alt+I" onAction="#inspect"/>
+    <MenuItem fx:id="consoleItem" text="Show JavaScript Console" accelerator="Shortcut+Alt+C" onAction="#console"/>
+   </items></Menu>
+  </items></Menu>
+  <Menu text="History" onShowing="#refresh"><items>
+   <MenuItem fx:id="backItem" text="Back" accelerator="Shortcut+Open Bracket" onAction="#back"/>
+   <MenuItem fx:id="forwardItem" text="Forward" accelerator="Shortcut+Close Bracket" onAction="#forward"/>
+   <SeparatorMenuItem/><MenuItem text="Show All History" accelerator="Shortcut+Y" onAction="#history"/>
+   <MenuItem text="Show History Sidebar" onAction="#historySidebar"/>
+   <MenuItem fx:id="reopenItem" text="Reopen Closed Tab" accelerator="Shortcut+Shift+T" onAction="#reopen"/>
+  </items></Menu>
+  <Menu text="Bookmarks" onShowing="#refresh"><items>
+   <MenuItem fx:id="bookmarkItem" text="Bookmark This Page" accelerator="Shortcut+D" onAction="#bookmark"/>
+   <MenuItem text="Show All Bookmarks" accelerator="Shortcut+Shift+B" onAction="#bookmarks"/>
+  </items></Menu>
+  <Menu text="Workspaces" onShowing="#refreshWorkspaces"><items>
+   <MenuItem text="Manage Workspaces…" onAction="#workspaces"/>
+   <Menu fx:id="workspaceList" text="Switch Workspace"/>
+   <SeparatorMenuItem/><CheckMenuItem fx:id="focusItem" text="Focus Mode" onAction="#focus"/>
+  </items></Menu>
+  <Menu text="Tab" onShowing="#refresh"><items>
+   <MenuItem fx:id="duplicateItem" text="Duplicate Tab" onAction="#duplicate"/>
+   <MenuItem fx:id="nextItem" text="Select Next Tab" accelerator="Ctrl+Tab" onAction="#next"/>
+   <MenuItem fx:id="previousItem" text="Select Previous Tab" accelerator="Ctrl+Shift+Tab" onAction="#previous"/>
+   <SeparatorMenuItem/>
+   <MenuItem fx:id="closeOthersItem" text="Close Other Tabs" onAction="#closeOthers"/>
+   <MenuItem fx:id="closeRightItem" text="Close Tabs to the Right" onAction="#closeRight"/>
+  </items></Menu>
+  <Menu text="Window" onShowing="#refresh"><items>
+   <MenuItem text="Minimize" accelerator="Shortcut+M" onAction="#minimize"/>
+   <MenuItem fx:id="maximizeItem" text="Zoom" onAction="#maximize"/>
+   <SeparatorMenuItem/><MenuItem text="Bring Flux to Front" onAction="#bringToFront"/>
+  </items></Menu>
+  <Menu text="Help"><items><MenuItem text="Flux Help" onAction="#help"/><MenuItem text="About Flux" onAction="#about"/></items></Menu>
+ </menus>
+</MenuBar>

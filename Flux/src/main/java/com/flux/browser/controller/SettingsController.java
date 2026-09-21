@@ -44,6 +44,11 @@ public final class SettingsController {
         button.setSelected(true); selectedCategory = String.valueOf(button.getUserData());
         settingsSearch.clear(); filter();
     }
+    public void selectCategory(String name) {
+        for (var toggle : categories.getToggles()) if (name.equals(toggle.getUserData())) {
+            categories.selectToggle(toggle); selectedCategory = name; settingsSearch.clear(); filter(); return;
+        }
+    }
     @FXML private void openFeature(javafx.event.ActionEvent event) { browser.featureSection(String.valueOf(((Button)event.getSource()).getUserData())); }
     @FXML private void history() { browser.showLibrary(false); }
     @FXML private void bookmarks() { browser.showLibrary(true); }
