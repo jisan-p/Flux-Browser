@@ -114,3 +114,13 @@ mvn javafx:run -Djavafx.args="--url=https://github.com/"
 | PostgreSQL JDBC | 42.7.13 | Database storage |
 
 On JDK 24+, JavaFX 26.0.2 is selected automatically.
+
+## Team Contributions
+
+This project was developed collaboratively, with each member taking ownership of core subsystems to ensure a functional and polished final product:
+
+| Member | ID | Key Responsibilities & Contributions |
+| :--- | :--- | :--- |
+| **Saad Al Abeed** | 230041142 | **Data Persistence & Storage Layer:** Architected the PostgreSQL database schema and implemented JDBC connections. Developed background DAOs (Data Access Objects) for asynchronous, thread-safe management of browser history, bookmarks, and speed dial entries. |
+| **Mehedul Hasan Prodhan** | 230041116 | **Core Architecture & Feature Integration:** Engineered the browser's core logic, navigation system, and tab management. Integrated the native WKWebView bridge and built out the advanced browser features, including workspaces, download management, and instant search utilities. |
+| **Mueej Al Basit** | 230041151 | **User Interface & UX Design:** Designed the Opera GX-inspired graphical interface using JavaFX and Scene Builder. Authored the comprehensive FXML layouts and custom CSS styling for all visual components, ensuring a cohesive and responsive user experience. |
