@@ -21,9 +21,9 @@ public final class BrowserChecks {
         equal(UrlResolver.resolve("[::1]:8080/a"), "http://[::1]:8080/a");
         equal(UrlResolver.resolve("bücher.de/lesen"), "https://xn--bcher-kva.de/lesen");
         equal(UrlResolver.resolve("https://example.com/a b"), "https://example.com/a%20b");
-        equal(UrlResolver.resolve("JavaFX & PostgreSQL"), "https://duckduckgo.com/?q=JavaFX+%26+PostgreSQL");
-        equal(UrlResolver.resolve("a+b #java"), "https://duckduckgo.com/?q=a%2Bb+%23java");
-        equal(UrlResolver.resolve("hello"), "https://duckduckgo.com/?q=hello");
+        equal(UrlResolver.resolve("JavaFX & PostgreSQL"), "https://www.google.com/search?q=JavaFX+%26+PostgreSQL");
+        equal(UrlResolver.resolve("a+b #java"), "https://www.google.com/search?q=a%2Bb+%23java");
+        equal(UrlResolver.resolve("hello"), "https://www.google.com/search?q=hello");
         equal(UrlResolver.pageTitle("", "https://www.example.com/"), "example.com");
         equal(UrlResolver.pageTitle("a".repeat(600), "https://example.com/").length(), 512);
         for (String bad : new String[]{"https://", "https://user:secret@example.com", "http://999.0.0.1", "http://[::1]:65536",

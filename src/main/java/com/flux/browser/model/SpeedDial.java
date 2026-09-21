@@ -12,6 +12,6 @@ public record SpeedDial(long id, String title, String url, Instant createdAt, in
                 new SpeedDial(-3, "YouTube", "https://www.youtube.com/", Instant.EPOCH, 2),
                 new SpeedDial(-4, "MDN Web Docs", "https://developer.mozilla.org/", Instant.EPOCH, 3),
                 new SpeedDial(-5, "OpenJFX", "https://openjfx.io/", Instant.EPOCH, 4),
-                new SpeedDial(-6, "DuckDuckGo", "https://duckduckgo.com/", Instant.EPOCH, 5));
+                new SpeedDial(-6, "Google", "https://www.google.com/", Instant.EPOCH, 5));
     }
 }

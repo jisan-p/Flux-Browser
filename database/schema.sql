@@ -39,7 +39,7 @@ BEGIN
             ('YouTube', 'https://www.youtube.com', 2),
             ('MDN Web Docs', 'https://developer.mozilla.org', 3),
             ('OpenJFX', 'https://openjfx.io', 4),
-            ('DuckDuckGo', 'https://duckduckgo.com', 5);
+            ('Google', 'https://www.google.com', 5);
     END IF;
 END
 $schema$;

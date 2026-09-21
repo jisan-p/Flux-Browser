@@ -68,6 +68,6 @@ The expanded feature matrix is in [ARCHITECTURE.md](ARCHITECTURE.md); runtime ev
 
 ### Where page actions live
 
-Right-click a webpage for **Search Selection in New Tab**, **Translate Page**, **Reader Mode**, or **Save Page As…**. Search uses DuckDuckGo, opens a new tab and treats the selection as plain text even when it looks like a URL or an address-bar command. It is disabled without selected text. Translation opens Google Translate in a new tab. Save Page uses WebKit’s existing download flow and save dialog; it does not create a complete offline archive with all page assets.
+Right-click a webpage for **Search Selection in New Tab**, **Translate Page**, **Reader Mode**, or **Save Page As…**. Search uses Google, opens a new tab and treats the selection as plain text even when it looks like a URL or an address-bar command. It is disabled without selected text. Translation opens Google Translate in a new tab. Save Page uses WebKit’s existing download flow and save dialog; it does not create a complete offline archive with all page assets.
 
 Browser tools retains preferences and managers: workspaces, privacy, search providers, passwords and downloads. **Open PDF…** is on the Downloads page. Browser tools and Settings route to that page. JavaFX compatibility page controls are retained for the future cross-platform version and are hidden in the native macOS build.

@@ -10,7 +10,7 @@ The browsing flow is `searchbar → urlParser.parse → browserUI → webviews �
 
 | Capability | Evidence in the supplied Min source | Current Flux implementation |
 | --- | --- | --- |
-| Address versus search resolution | `js/util/urlParser.js`, `js/util/searchEngine.js` | Retain. Normalize HTTP(S), hostnames, local development addresses, and international domains; encode ordinary searches for DuckDuckGo. |
+| Address versus search resolution | `js/util/urlParser.js`, `js/util/searchEngine.js` | Retain. Normalize HTTP(S), hostnames, local development addresses, and international domains; encode ordinary searches for Google. |
 | Open, select, close tabs | `js/browserUI.js`, `js/tabState/tab.js`, `js/navbar/tabBar.js` | Retain. One controller and lazily created native/compatibility page per tab; closing the last tab creates a fresh Speed Dial. |
 | Back, forward, reload, stop | `js/navbar/navigationButtons.js`, `js/webviews.js`, `js/keybindings.js` | Retain through WKWebView (WebEngine/WebHistory fallback) and desktop keyboard shortcuts. Add a native FXML Home view. |
 | Page title, progress, errors | `js/webviews.js`, `js/navbar/progressBar.js`, `pages/error/` | Retain real worker progress, title fallback, failed-load recovery, and cancellation. |

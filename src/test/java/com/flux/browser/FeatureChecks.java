@@ -73,8 +73,8 @@ public final class FeatureChecks {
             if(old==null)System.clearProperty("flux.profileDir");else System.setProperty("flux.profileDir",old);
             try(var files=Files.list(directory)){for(Path file:files.toList())Files.delete(file);}Files.delete(directory);
         }
-        BrowserChecks.equal(PageActions.search("example.com"), "https://duckduckgo.com/?q=example.com");
-        BrowserChecks.equal(PageActions.search("= 2 + 2"), "https://duckduckgo.com/?q=%3D+2+%2B+2");
+        BrowserChecks.equal(PageActions.search("example.com"), "https://www.google.com/search?q=example.com");
+        BrowserChecks.equal(PageActions.search("= 2 + 2"), "https://www.google.com/search?q=%3D+2+%2B+2");
         BrowserChecks.check(PageActions.translation("https://example.com/?a=1&b=2", "bn").endsWith("https%3A%2F%2Fexample.com%2F%3Fa%3D1%26b%3D2"), "translation encodes entire URL");
         System.out.println("FeatureChecks passed: session round-trip/validation, search plugins, arithmetic, origins, reader asset, and domain rules.");
     }

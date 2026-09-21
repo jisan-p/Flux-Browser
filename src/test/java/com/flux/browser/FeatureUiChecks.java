@@ -86,7 +86,7 @@ public final class FeatureUiChecks {
                 BrowserChecks.check(menu.contains("Inspect Element") && menu.contains("Copy"), "native inspector and copy items retained");
                 BrowserChecks.check(menu.contains("Reader Mode") && menu.contains("Save Page As") && menu.contains("Translate Page"), "page menu actions available");
                 fx(()->original.contextMenuForTesting("activate","flux.search")).get();
-                await("selection search opens tab",()->count()==4 && browser.currentUrl().startsWith("https://duckduckgo.com/?q=Observatory+article"));
+                await("selection search opens tab",()->count()==4 && browser.currentUrl().startsWith("https://www.google.com/search?q=Observatory+article"));
                 fx(()->{browser.nativeShortcut("w");return null;});
                 BrowserChecks.check(fx(()->browser.currentPage()==original), "selection search preserves source tab");
                 script("getSelection().removeAllRanges();true");

@@ -15,7 +15,7 @@ public final class PageActions {
     }
     public static String search(String text) {
         if (text == null || text.isBlank()) throw new IllegalArgumentException("Select some text to search.");
-        String url = "https://duckduckgo.com/?q=" + encode(text.strip());
+        String url = "https://www.google.com/search?q=" + encode(text.strip());
         if (url.length() > 2048) throw new IllegalArgumentException("Select a shorter phrase to search.");
         return url;
     }

@@ -19,7 +19,7 @@ public final class UrlResolver {
         if (text.matches("(?is)^[a-z][a-z0-9+.-]*:.*")) {
             throw new IllegalArgumentException("Enter an http:// or https:// address, or a search query.");
         }
-        String result = "https://duckduckgo.com/?q=" + URLEncoder.encode(text, StandardCharsets.UTF_8);
+        String result = "https://www.google.com/search?q=" + URLEncoder.encode(text, StandardCharsets.UTF_8);
         if (result.length() > 2048) throw new IllegalArgumentException("That search is too long. Use fewer than 2,000 characters.");
         return result;
     }
