@@ -6,6 +6,11 @@ Built with Java 21, JavaFX, and WKWebView. Browsing works without a database —
 
 ![Flux Browser](docs/images/flux-gx-home.png)
 
+> [!CAUTION]
+> **macOS Required:** Flux relies on native WKWebView through a JNI bridge for its core functionality. While it technically has fallback support for Windows and Linux, the complete experience (especially media playback on sites like YouTube) is **only fully supported and optimized on macOS**.
+
+[**📺 Watch the Presentation Video on YouTube**](https://youtu.be/toFne5K-vAY)
+
 ## Platform Support
 
 Flux is currently **fully optimized for macOS**. On macOS, it uses Apple's native **WKWebView** through a JNI bridge instead of relying only on JavaFX WebView. This provides better compatibility with modern websites, JavaScript, media playback, and native browser functionality.
