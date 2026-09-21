@@ -20,6 +20,7 @@
                 <version>0.0.8</version>
                 <configuration>
                     <skip>true</skip>
+                    <mainClass>com.flux.browser/com.flux.browser.FluxBrowser</mainClass>
                 </configuration>
             </plugin>
         </plugins>
