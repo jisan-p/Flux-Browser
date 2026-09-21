@@ -32,7 +32,6 @@ CREATE DATABASE flux OWNER flux;
 
 ```sh
 # Copy and edit the config file with your password
-cd Flux
 cp config/database.properties.example config/database.properties
 ```
 
@@ -41,7 +40,6 @@ Tables are created automatically on first launch.
 ## Build & Run
 
 ```sh
-cd Flux
 mvn clean verify
 mvn javafx:run
 ```
@@ -87,7 +85,6 @@ mvn javafx:run -Djavafx.args="--url=https://github.com/"
 ## Project Structure
 
 ```
-Flux/
 ├── src/main/java/       # Application source
 ├── src/main/native/     # WKWebView bridge (Objective-C)
 ├── src/main/resources/  # FXML views, CSS, assets
