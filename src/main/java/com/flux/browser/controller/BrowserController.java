@@ -124,7 +124,7 @@ public final class BrowserController {
             else refreshChrome();
         });
         stage.getScene().addEventFilter(KeyEvent.KEY_PRESSED, this::keyPressed);
-        stage.maximizedProperty().addListener((observable, before, after) -> maximizeButton.setAccessibleText(after ? "Restore window" : "Maximize window"));
+        stage.fullScreenProperty().addListener((observable, before, after) -> maximizeButton.setAccessibleText(after ? "Exit full screen" : "Enter full screen"));
         stage.iconifiedProperty().addListener((observable, before, after) -> { updateActiveContent(); soundscape.paused(after); });
         root.widthProperty().addListener(o -> chromeRefresh.start());
         createTab();
@@ -295,6 +295,7 @@ public final class BrowserController {
         tab.header().dispose(); tab.page().dispose();
         tabs.remove(tab); tabHeaders.getChildren().remove(tab.chip()); tabHost.getChildren().remove(tab.content());
         workspaces.remove(tab);
+        if (tabs.isEmpty()) { quit(); return; }
         List<Tab> remaining = visibleTabs();
         if (remaining.isEmpty()) { active = null; createTab(); focusAddress(); }
         else if (wasActive) selectTab(remaining.get(Math.min(Math.max(0,index), remaining.size() - 1)));
@@ -632,12 +633,12 @@ public final class BrowserController {
     @FXML private void minimize() { stage.setIconified(true); }
     @FXML private void maximize() {
         WindowGeometry.minimum(stage, WindowGeometry.screen(stage));
-        stage.setMaximized(!stage.isMaximized());
+        stage.setFullScreen(!stage.isFullScreen());
     }
     @FXML private void quit() { close(); stage.close(); Platform.exit(); }
     @FXML private void beginDrag(MouseEvent event) { dragX = event.getScreenX() - stage.getX(); dragY = event.getScreenY() - stage.getY(); }
     @FXML private void dragWindow(MouseEvent event) {
-        if (!stage.isMaximized() && event.isPrimaryButtonDown()) { stage.setX(event.getScreenX() - dragX); stage.setY(event.getScreenY() - dragY); }
+        if (!stage.isFullScreen() && event.isPrimaryButtonDown()) { stage.setX(event.getScreenX() - dragX); stage.setY(event.getScreenY() - dragY); }
     }
     @FXML private void titleClicked(MouseEvent event) { if (event.getClickCount() == 2 && event.getButton() == MouseButton.PRIMARY) maximize(); }
     @FXML private void beginResize(MouseEvent event) { windowResize.beginCorner(event); }

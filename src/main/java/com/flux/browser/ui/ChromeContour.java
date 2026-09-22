@@ -50,6 +50,15 @@ public final class ChromeContour extends Canvas {
         g.setStroke(new LinearGradient(0, 12, 0, Math.min(h, 400), false, CycleMethod.NO_CYCLE,
                 new Stop(0, accent), new Stop(.35, accent.deriveColor(0,1,1,.35)), new Stop(1, Color.TRANSPARENT)));
         g.strokeLine(.6, 15, .6, Math.min(h, 400));
+
+        // Bottom-right contour
+        g.setStroke(new LinearGradient(w, h, 0, h, false, CycleMethod.NO_CYCLE,
+                new Stop(0, accent), new Stop(.65, accent.deriveColor(0,1,1,.7)), new Stop(1, Color.TRANSPARENT)));
+        g.strokeLine(w - .6, h - .6, 12, h - .6);
+        
+        g.setStroke(new LinearGradient(w, h, w, Math.max(0, h - 400), false, CycleMethod.NO_CYCLE,
+                new Stop(0, accent), new Stop(.35, accent.deriveColor(0,1,1,.35)), new Stop(1, Color.TRANSPARENT)));
+        g.strokeLine(w - .6, h - .6, w - .6, Math.max(0, h - 400));
     }
     public void dispose() { select(null); refresh.stop(); }
 }

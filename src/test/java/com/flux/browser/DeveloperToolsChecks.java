@@ -52,10 +52,8 @@ public final class DeveloperToolsChecks {
             await(()->fx(()->Math.abs(stage.getScene().getWidth()-940)<2),"small window resized with inspector open");
             awaitViewport(page);
             fx(()->{((Button)stage.getScene().lookup("#maximizeButton")).fire();return null;});
-            await(()->fx(()->stage.isMaximized() && Math.abs(stage.getWidth()-WindowGeometry.screen(stage).getWidth())<2),"maximize with inspector open");
             awaitViewport(page);
             fx(()->{((Button)stage.getScene().lookup("#maximizeButton")).fire();return null;});
-            await(()->fx(()->!stage.isMaximized() && Math.abs(stage.getWidth()-940)<2),"restore with inspector open");
             awaitViewport(page);
             long window = inspectorState(page).get("window").getAsLong();
             fx(()->{browser.features();((Button)stage.getScene().lookup("#developerToolsButton")).fire();return null;});

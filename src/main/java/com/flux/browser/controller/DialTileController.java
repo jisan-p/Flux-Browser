@@ -47,7 +47,9 @@ public final class DialTileController {
         openButton.setStyle("-fx-background-color:linear-gradient(to bottom right,"+colors[Math.floorMod(UrlResolver.host(item.url()).hashCode(),colors.length)]+",#17131f);");
         javafx.animation.ScaleTransition hover=new javafx.animation.ScaleTransition(javafx.util.Duration.millis(120),root);
         javafx.animation.TranslateTransition lift=new javafx.animation.TranslateTransition(javafx.util.Duration.millis(120),root);
+        editButton.setVisible(false); deleteButton.setVisible(false);
         root.hoverProperty().addListener((o,before,over)->{
+            editButton.setVisible(over); deleteButton.setVisible(over);
             hover.stop();lift.stop();var a=browser.preferences().appearance;
             double scale=over && a.tileEffect.equals("Zoom") ? 1.035 : 1;
             double y=over && a.tileEffect.equals("Lift") ? -4 : 0;

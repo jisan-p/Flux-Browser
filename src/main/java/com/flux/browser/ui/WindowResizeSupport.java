@@ -30,8 +30,8 @@ public final class WindowResizeSupport {
     }
 
     // The outer gutter stays outside the native WebKit container, so all edges receive events.
-    private int horizontal(MouseEvent e) { return e.getSceneX() < 4 ? -1 : e.getSceneX() >= root.getLayoutBounds().getWidth() - 4 ? 1 : 0; }
-    private int vertical(MouseEvent e) { return e.getSceneY() < 4 ? -1 : e.getSceneY() >= root.getLayoutBounds().getHeight() - 4 ? 1 : 0; }
+    private int horizontal(MouseEvent e) { return e.getSceneX() < 4 ? -1 : e.getSceneX() >= stage.getScene().getWidth() - 4 ? 1 : 0; }
+    private int vertical(MouseEvent e) { return e.getSceneY() < 4 ? -1 : e.getSceneY() >= stage.getScene().getHeight() - 4 ? 1 : 0; }
 
     public void beginCorner(MouseEvent event) { begin(event, 1, 1); }
     private void begin(MouseEvent e, int x, int y) {

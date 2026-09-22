@@ -119,8 +119,8 @@
 .dial-tile.alternate .dial-monogram { -fx-text-fill: #75dded; -fx-background-color: rgba(80, 185, 210, 0.12); }
 .dial-title { -fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #e5e5ef; }
 .dial-domain { -fx-font-size: 10; -fx-text-fill: #8c8c9f; }
-.tile-action { -fx-text-fill: #9292a3; -fx-font-size: 10; -fx-padding: 2 5; }
-.tile-action:hover { -fx-text-fill: -flux-accent; }
+.tile-action { -fx-text-fill: #9292a3; -fx-font-size: 14; -fx-padding: 3 6; -fx-background-color: transparent; -fx-cursor: hand; }
+.tile-action:hover { -fx-text-fill: -flux-accent; -fx-background-color: rgba(255,255,255,0.1); -fx-background-radius: 4; }
 .home-footer { -fx-border-color: #2a2a33; -fx-border-width: 1 0 0 0; -fx-padding: 18 0 0 0; }
 .footer-motto { -fx-text-fill: #7f7f94; -fx-font-size: 9; -fx-font-weight: bold; }
 .error-page { -fx-padding: 45; }

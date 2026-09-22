@@ -10,6 +10,7 @@ import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.scene.paint.Color;
 
 public final class FluxBrowser extends Application {
     private BrowserController browser;
@@ -23,10 +24,12 @@ public final class FluxBrowser extends Application {
         var view = Views.<BrowserController>load("BrowserWindow");
         browser = view.controller();
         var bounds = Screen.getPrimary().getVisualBounds();
-        stage.initStyle(StageStyle.UNDECORATED);
+        stage.initStyle(StageStyle.TRANSPARENT);
         stage.setTitle("Flux · Speed Dial");
         WindowGeometry.minimum(stage, bounds);
-        stage.setScene(new Scene(view.root()));
+        Scene scene = new Scene(view.root());
+        scene.setFill(Color.TRANSPARENT);
+        stage.setScene(scene);
         WindowGeometry.apply(stage, WindowGeometry.initial(bounds));
         browser.configure(stage, new DatabaseManager());
         stage.setOnCloseRequest(event -> browser.close());

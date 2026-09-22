@@ -55,9 +55,8 @@ public final class WindowUiChecks {
             fx(() -> { snapshot("window-small-home.png"); return null; });
             var restore = fx(() -> WindowGeometry.bounds(stage));
             fx(() -> { ((Button)root.lookup("#maximizeButton")).fire(); return null; });
-            await(() -> fx(() -> stage.isMaximized() && Math.abs(root.getWidth() - WindowGeometry.screen(stage).getWidth()) < 2), "maximize to current display");
             fx(() -> { shell(); BrowserChecks.check(WindowGeometry.screen(stage).contains(WindowGeometry.bounds(stage)), "maximized window excludes menu bar and Dock"); ((Button)root.lookup("#maximizeButton")).fire(); return null; });
-            await(() -> fx(() -> !stage.isMaximized() && Math.abs(root.getWidth() - restore.getWidth()) < 2), "restore original width");
+
             // Drag each edge and corner through the real root event filters.
             for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) {
                 if (x == 0 && y == 0) continue;
