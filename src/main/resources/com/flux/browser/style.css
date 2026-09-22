@@ -44,6 +44,7 @@
 .secondary-button { -fx-background-color: #25252d; -fx-border-color: #3c3c47; -fx-padding: 11 16; }
 .text-button { -fx-text-fill: #b7b7c5; -fx-font-size: 12; -fx-padding: 8 12; }
 .text-button:hover { -fx-text-fill: -flux-accent; -fx-background-color: -flux-soft; }
+.manager-close { -fx-font-size: 24; -fx-font-weight: bold; -fx-padding: 2 12; }
 .danger-button { -fx-background-color: rgba(250, 30, 78, 0.09); -fx-text-fill: #ff829e; -fx-border-color: #59303c; -fx-padding: 11 16; }
 .line-icon { -fx-fill: transparent; -fx-stroke: #a7a7b8; -fx-stroke-width: 1.5; -fx-stroke-line-cap: round; -fx-stroke-line-join: round; }
 .button:hover .line-icon { -fx-stroke: #ffffff; }

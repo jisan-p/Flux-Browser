@@ -157,7 +157,47 @@ public final class BrowserController {
         return tab;
     }
 
-    @FXML public void workspaces() { featureSection("Workspaces"); }
+    @FXML public void workspaces() {
+        javafx.scene.control.ContextMenu menu = new javafx.scene.control.ContextMenu();
+        menu.getStyleClass().add("browser-menu");
+        for (String ws : preferences.workspaces) {
+            javafx.scene.control.Menu wsMenu = new javafx.scene.control.Menu(ws);
+            for (Tab t : tabs) {
+                if (ws.equals(this.workspaces.get(t))) {
+                    String title = t.page().titleProperty().get();
+                    if (title == null || title.isBlank()) title = "Untitled Tab";
+                    if (title.length() > 40) title = title.substring(0, 40) + "...";
+                    javafx.scene.control.MenuItem tabItem = new javafx.scene.control.MenuItem(title);
+                    tabItem.setOnAction(e -> {
+                        switchWorkspace(ws);
+                        selectTab(t);
+                    });
+                    wsMenu.getItems().add(tabItem);
+                }
+            }
+            if (wsMenu.getItems().isEmpty()) {
+                javafx.scene.control.MenuItem empty = new javafx.scene.control.MenuItem("No tabs");
+                empty.setDisable(true);
+                wsMenu.getItems().add(empty);
+            }
+            menu.getItems().add(wsMenu);
+        }
+        menu.getItems().add(new javafx.scene.control.SeparatorMenuItem());
+        javafx.scene.control.MenuItem manageItem = new javafx.scene.control.MenuItem("Manage Workspaces...");
+        manageItem.setOnAction(e -> featureSection("Workspaces"));
+        menu.getItems().add(manageItem);
+        menu.show(workspacesButton, javafx.geometry.Side.RIGHT, 10, 0);
+    }
+    public void newWorkspace() {
+        String name = com.flux.browser.util.Dialogs.prompt(window(), "New Workspace", "Enter a name for the new workspace:", "");
+        if (name != null && !name.isBlank()) {
+            try {
+                createWorkspace(name.trim());
+            } catch (IllegalArgumentException e) {
+                message(e.getMessage());
+            }
+        }
+    }
     public void pageAction(BrowserPage source, String payload) {
         if (closed || source != currentPage()) return;
         try {
@@ -406,6 +446,9 @@ public final class BrowserController {
         libraryController.show(bookmarks);
         sidebarController.select(bookmarks ? "bookmarks" : "history");
         refreshChrome();
+    }
+    @FXML public void showBookmarks() {
+        showLibrary(true);
     }
     @FXML public void settings() {
         closeHistoryPanel(); closeEasySetup();

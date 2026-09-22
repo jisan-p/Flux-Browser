@@ -19,6 +19,7 @@ public final class TabHeaderController {
     @FXML private Button closeButton;
     @FXML private javafx.scene.control.ContextMenu tabMenu;
     @FXML private javafx.scene.control.MenuItem newItem, duplicateItem, closeItem, closeOthersItem, closeRightItem, reopenItem;
+    @FXML private javafx.scene.control.CheckMenuItem focusModeItem;
     private BrowserController browser;
     private WebTabController page;
     private Runnable selectAction, closeAction;
@@ -46,6 +47,7 @@ public final class TabHeaderController {
         closeOthersItem.setDisable(!browser.hasOtherTabs(page, false));
         closeRightItem.setDisable(!browser.hasOtherTabs(page, true));
         reopenItem.setDisable(!browser.canReopenTab());
+        focusModeItem.setSelected(browser.focusMode());
         com.flux.browser.ui.Menus.show(tabMenu, root, event);
     }
     @FXML private void newTab() { browser.newTab(); }
@@ -55,11 +57,13 @@ public final class TabHeaderController {
     @FXML private void closeOthers() { browser.closeOtherTabs(page, false); }
     @FXML private void closeRight() { browser.closeOtherTabs(page, true); }
     @FXML private void reopen() { browser.reopenClosedTab(); }
+    @FXML private void toggleFocusMode() { browser.setFocusMode(!browser.focusMode()); }
+
     public void dispose() {
         tabMenu.hide();
         titleLabel.textProperty().unbind(); titleTooltip.textProperty().unbind();
         spinner.visibleProperty().unbind(); tabIcon.visibleProperty().unbind();
         closeButton.accessibleTextProperty().unbind();
-        selectAction = null; closeAction = null;
+        browser = null; page = null; selectAction = null; closeAction = null;
     }
 }

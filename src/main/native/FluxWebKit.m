@@ -83,6 +83,7 @@ static void emit(long long identifier, NSString *kind, NSString *value, long lon
         configuration.upgradeKnownHostsToHTTPS = secureHosts;
         if (blockingRules) [configuration.userContentController addContentRuleList:blockingRules];
         _web = [[FluxContextWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration];
+        _web.customUserAgent = @"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15 Flux/1.0";
         _viewport = [[FluxViewport alloc] initWithFrame:NSZeroRect];
         _viewport.page = _web;
         _viewport.hidden = YES;

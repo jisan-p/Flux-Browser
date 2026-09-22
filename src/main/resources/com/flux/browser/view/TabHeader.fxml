@@ -17,6 +17,8 @@
             <MenuItem text="Close Tabs to the Right" fx:id="closeRightItem" onAction="#closeRight"/>
             <SeparatorMenuItem/>
             <MenuItem text="Reopen Last Closed Tab" fx:id="reopenItem" onAction="#reopen"/>
+            <SeparatorMenuItem/>
+            <CheckMenuItem text="Focus Mode" fx:id="focusModeItem" onAction="#toggleFocusMode"/>
         </items></ContextMenu>
     </fx:define>
     <StackPane prefWidth="14" minWidth="14">

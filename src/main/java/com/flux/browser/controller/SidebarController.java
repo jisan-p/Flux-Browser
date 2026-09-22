@@ -9,6 +9,7 @@ public final class SidebarController {
     private BrowserController browser;
     private String selectedPage;
     public void configure(BrowserController browser) { this.browser = browser; }
+    @FXML private void newWorkspace() { if (browser != null) browser.newWorkspace(); }
     @FXML private void home() { if (browser != null) browser.home(); }
     @FXML private void bookmarks() { if (browser != null) browser.showLibrary(true); }
     @FXML private void history() { if (browser != null) browser.showLibrary(false); }

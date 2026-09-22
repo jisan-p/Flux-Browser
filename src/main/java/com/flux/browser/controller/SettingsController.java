@@ -14,6 +14,8 @@ public final class SettingsController {
     @FXML private javafx.scene.control.ToggleGroup categories, displayModes;
     @FXML private javafx.scene.layout.FlowPane themeChoices;
     @FXML private javafx.scene.layout.VBox settingsCards;
+    @FXML private javafx.scene.Parent managerHeader;
+    @FXML private ManagerHeaderController managerHeaderController;
     @FXML private Label noResults;
     private String selectedCategory = "Appearance";
     private BrowserController browser;
@@ -21,6 +23,7 @@ public final class SettingsController {
 
     public void configure(BrowserController browser) {
         this.browser = browser;
+        managerHeaderController.configure(browser);
         zoomSlider.valueProperty().addListener((observable, old, value) -> {
             zoomLabel.setText(Math.round(value.doubleValue()) + "%");
             if (!updating) browser.setZoom(value.doubleValue() / 100);
@@ -50,8 +53,6 @@ public final class SettingsController {
         }
     }
     @FXML private void openFeature(javafx.event.ActionEvent event) { browser.featureSection(String.valueOf(((Button)event.getSource()).getUserData())); }
-    @FXML private void history() { browser.showLibrary(false); }
-    @FXML private void bookmarks() { browser.showLibrary(true); }
     @FXML private void theme(javafx.event.ActionEvent event) {
         browser.preferences().appearance.theme(String.valueOf(((Button) event.getSource()).getUserData()));
         browser.appearanceChanged(); syncThemes();
@@ -68,6 +69,7 @@ public final class SettingsController {
     }
     public void show(double zoom) {
         syncThemes();
+        managerHeaderController.select(managerHeader, "Settings");
         updating = true;
         zoomSlider.setValue(zoom * 100);
         updating = false;

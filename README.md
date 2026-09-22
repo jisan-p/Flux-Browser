@@ -6,12 +6,20 @@ Built with Java 21, JavaFX, and WKWebView. Browsing works without a database —
 
 ![Flux Browser](docs/images/flux-gx-home.png)
 
+## Platform Support
+
+Flux is currently **fully optimized for macOS**. On macOS, it uses Apple's native **WKWebView** through a JNI bridge instead of relying only on JavaFX WebView. This provides better compatibility with modern websites, JavaScript, media playback, and native browser functionality.
+
+Flux can also run on **Windows and Linux** using JavaFX WebView. However, JavaFX WebView has limitations with some modern, media-heavy websites such as YouTube, so **macOS is currently the preferred platform for the complete Flux experience**.
+
 ## Prerequisites
 
-- **JDK 21+** (Apple Silicon JDK recommended on M-series Macs)
-- **Maven 3.9+**
-- **Xcode Command Line Tools** — `xcode-select --install`
-- **PostgreSQL** (optional, for bookmarks/history/speed dial persistence)
+- JDK 21+
+- Maven 3.9+
+- **macOS only:** Xcode Command Line Tools — `xcode-select --install`
+- PostgreSQL *(optional, for bookmarks/history/speed dial persistence)*
+
+> Apple Silicon JDK is recommended for M-series Macs.
 
 ## Database Setup (Optional)
 

@@ -11,6 +11,7 @@ public final class DialTileController {
     @FXML private VBox root;
     @FXML private Label monogram, titleLabel, domainLabel;
     @FXML private Button openButton, editButton, deleteButton;
+    @FXML private javafx.scene.image.ImageView iconView;
     @FXML private javafx.scene.control.ContextMenu tileMenu;
     @FXML private javafx.scene.control.MenuItem editItem, deleteItem, newTabItem;
     @FXML private void contextMenu(javafx.scene.input.ContextMenuEvent event) {
@@ -27,7 +28,21 @@ public final class DialTileController {
         this.browser = browser;
         this.item = item;
         titleLabel.setText(item.title());
-        monogram.setText(item.title());
+        String initial = item.title() != null && !item.title().isBlank() ? item.title().trim().substring(0, 1).toUpperCase(java.util.Locale.ROOT) : "?";
+        monogram.setText(initial);
+        
+        String host = UrlResolver.host(item.url());
+        javafx.scene.image.Image icon = new javafx.scene.image.Image("https://s2.googleusercontent.com/s2/favicons?domain=" + host + "&sz=128", true);
+        icon.progressProperty().addListener((o, old, prog) -> {
+            if (prog.doubleValue() == 1.0) {
+                if (!icon.isError() && icon.getWidth() > 0) {
+                    iconView.setImage(icon);
+                    iconView.setEffect(new javafx.scene.effect.DropShadow(6, javafx.scene.paint.Color.rgb(0,0,0,0.3)));
+                    monogram.setVisible(false);
+                    openButton.setStyle("-fx-background-color: transparent;");
+                }
+            }
+        });
         String[] colors={"#6636bb","#23457f","#136c6c","#9c2346","#174e97","#4b3e89"};
         openButton.setStyle("-fx-background-color:linear-gradient(to bottom right,"+colors[Math.floorMod(UrlResolver.host(item.url()).hashCode(),colors.length)]+",#17131f);");
         javafx.animation.ScaleTransition hover=new javafx.animation.ScaleTransition(javafx.util.Duration.millis(120),root);

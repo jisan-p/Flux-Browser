@@ -7,5 +7,5 @@
  <Button text="SETTINGS" userData="Settings" onAction="#navigate" styleClass="manager-tab"/>
  <Button text="BOOKMARKS" userData="Bookmarks" onAction="#navigate" styleClass="manager-tab"/>
  <Region HBox.hgrow="ALWAYS"/>
- <Button text="×" onAction="#dismiss" styleClass="text-button" accessibleText="Back to browsing"/>
+ <Button text="×" onAction="#dismiss" styleClass="text-button,manager-close" accessibleText="Back to browsing"/>
 </HBox>
